@@ -1,106 +1,79 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>準教師戰鬥營 - 讀書會系統原型</title>
+  <title>準教師戰鬥營 - 教資教甄線上讀書會系統</title>
   
-  <!-- 1. 引入 Tailwind CSS CDN -->
+  <!-- 載入 Tailwind CSS 與 FontAwesome 圖示 -->
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
-  <!-- 2. 在上傳前直接配置 Tailwind 主題、客製顏色與字型 -->
+  <!-- Tailwind 客製主題配置 -->
   <script>
     tailwind.config = {
       theme: {
         extend: {
           colors: {
-            // 車站看板專用深色與翻牌色
             station: {
               board: '#090d16',
-              panel: '#0f172a',
               gold: '#fbbf24',
-              goldBg: '#1e1b11',
-            },
-            // 教資試卷專用色
-            exam: {
-              paper: '#0b1120',
-              line: '#334155',
-              margin: '#475569',
+              goldBg: '#1e1b11'
             }
-          },
-          fontFamily: {
-            mono: ['"SF Mono"', 'Consolas', '"Roboto Mono"', 'monospace'],
-            sans: ['-apple-system', 'BlinkMacSystemFont', '"PingFang TC"', '"Microsoft JhengHei"', 'sans-serif'],
           }
         }
       }
     }
   </script>
 
-  <!-- 3. 客製 CSS 樣式：試卷答案卷格線、翻牌陰影、分頁切換 -->
   <style>
     /* 分頁顯示邏輯 */
     .tab-content { display: none; }
     .tab-content.active { display: block; }
 
-    /* 仿教育部教資試卷：每行 32px 橫條底線與真實稿紙手感 */
+    /* 仿教育部教資試卷：每行 32px 橫線與真實手寫格感 */
     .exam-ruled-lines {
       background-image: linear-gradient(transparent 31px, #334155 32px);
       background-size: 100% 32px;
       line-height: 32px;
     }
-
-    /* 車站黃金翻牌物理中縫效果 */
-    .split-flap-char {
-      position: relative;
-    }
-    .split-flap-char::after {
-      content: '';
-      position: absolute;
-      left: 0;
-      top: 50%;
-      width: 100%;
-      height: 1px;
-      background: rgba(0, 0, 0, 0.45);
-      box-shadow: 0 1px 1px rgba(255, 255, 255, 0.08);
-    }
   </style>
-
-  <!-- 4. 圖示庫與 Mermaid 圖表渲染庫 -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
-  <script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
 </head>
-
 <body class="bg-slate-900 text-slate-100 min-h-screen font-sans flex flex-col">
 
-  <!-- 頂部功能導覽列 -->
-  <header class="bg-slate-800 border-b border-slate-700 px-6 py-3 flex items-center justify-between sticky top-0 z-30 shadow-md">
-    <div class="flex items-center space-x-6">
-      <div class="flex items-center space-x-3 cursor-pointer" onclick="switchTab('bulletin')">
-        <div class="bg-indigo-600 text-white p-2 rounded-lg text-lg font-bold shadow-md">
-          <i class="fa-solid fa-graduation-cap"></i>
-        </div>
-        <div>
-          <h1 class="text-base font-bold text-slate-100 flex items-center gap-2">
-            準教師戰鬥營 
-            <span class="text-[10px] bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 px-2 py-0.5 rounded">教資教甄讀書會</span>
-          </h1>
-          <p class="text-xs text-slate-400">雙向互助學習?線上命題與研討系統</p>
-        </div>
+  <!-- 頂部功能導覽列 (支援手機版多行自適應) -->
+  <header class="bg-slate-800 border-b border-slate-700 px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3 sticky top-0 z-30 shadow-md">
+    <div class="flex items-center space-x-3 cursor-pointer" onclick="switchTab('bulletin')">
+      <div class="bg-indigo-600 text-white p-2 rounded-lg text-lg font-bold shadow-md">
+        <i class="fa-solid fa-graduation-cap"></i>
       </div>
-
-      <!-- 導航分頁按鈕 -->
-      <nav class="hidden md:flex space-x-1 text-xs font-semibold">
-        <button id="nav-bulletin" onclick="switchTab('bulletin')" class="px-3 py-1.5 rounded-md bg-indigo-600 text-white transition">布告欄</button>
-        <button id="nav-members" onclick="switchTab('members')" class="px-3 py-1.5 rounded-md text-slate-400 hover:text-slate-200 transition">準教師會</button>
-        <button id="nav-ebook" onclick="switchTab('ebook')" class="px-3 py-1.5 rounded-md text-slate-400 hover:text-slate-200 transition">電子書</button>
-        <button id="nav-exam" onclick="switchTab('exam')" class="px-3 py-1.5 rounded-md text-slate-400 hover:text-slate-200 transition">超會考</button>
-      </nav>
+      <div>
+        <h1 class="text-base font-bold text-slate-100 flex items-center gap-2">
+          準教師戰鬥營 
+          <span class="text-[10px] bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 px-2 py-0.5 rounded">教資教甄讀書會</span>
+        </h1>
+        <p class="text-xs text-slate-400">雙向互助學習・智慧出題與研討系統</p>
+      </div>
     </div>
 
-    <!-- 權限身分切換 -->
-    <div class="flex items-center space-x-3 text-xs">
+    <!-- 導航分頁按鈕 (手機也能直接點擊) -->
+    <nav class="flex items-center gap-1.5 text-xs font-semibold overflow-x-auto py-1">
+      <button id="nav-bulletin" onclick="switchTab('bulletin')" class="px-3 py-1.5 rounded-md bg-indigo-600 text-white transition">
+        <i class="fa-solid fa-bullhorn mr-1"></i>布告欄
+      </button>
+      <button id="nav-members" onclick="switchTab('members')" class="px-3 py-1.5 rounded-md text-slate-400 hover:text-slate-200 transition">
+        <i class="fa-solid fa-users mr-1"></i>準教師會
+      </button>
+      <button id="nav-ebook" onclick="switchTab('ebook')" class="px-3 py-1.5 rounded-md text-slate-400 hover:text-slate-200 transition">
+        <i class="fa-solid fa-book-open mr-1"></i>電子書
+      </button>
+      <button id="nav-exam" onclick="switchTab('exam')" class="px-3 py-1.5 rounded-md text-slate-400 hover:text-slate-200 transition">
+        <i class="fa-solid fa-pencil mr-1"></i>超會考
+      </button>
+    </nav>
+
+    <!-- 角色權限模擬切換 -->
+    <div class="flex items-center space-x-2 text-xs">
       <button id="role-btn" onclick="toggleRole()" class="px-2.5 py-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 transition flex items-center gap-1.5">
         <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
         <span id="role-text">正式成員 (點擊切換)</span>
@@ -108,239 +81,576 @@
     </div>
   </header>
 
-  <!-- 主內容區 -->
+  <!-- 主內容容器 -->
   <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6">
 
-    <!-- 1. 布告欄 (車站時刻表) -->
+    <!-- 模組 1：布告欄（車站電子時刻表風格） -->
     <section id="tab-bulletin" class="tab-content active space-y-4">
+      <!-- 標題看版與電子鐘 -->
       <div class="bg-slate-950 border border-slate-800 rounded-xl p-5 shadow-2xl flex flex-col md:flex-row items-center justify-between gap-4">
         <div>
           <h2 class="text-xl font-black tracking-wider text-amber-400 flex items-center gap-2">
             ★ 準教師戰鬥營 ★ 每日重要公告板
           </h2>
-          <p class="text-xs text-slate-400 mt-1 font-mono">STATION DEPARTURE NOTICE BOARD</p>
+          <p class="text-xs text-slate-400 mt-1 font-mono tracking-wider">STATION DEPARTURE NOTICE BOARD - TAIWAN CTE</p>
         </div>
-        <div class="bg-slate-900 border border-slate-700 px-4 py-2 rounded-lg text-2xl font-mono font-bold text-amber-400 tracking-widest shadow-inner">
+        <div class="bg-slate-900 border border-slate-700 px-5 py-2 rounded-lg text-2xl font-mono font-bold text-amber-400 tracking-widest shadow-inner">
           14:47:21
         </div>
       </div>
 
-      <div class="bg-slate-950 border border-slate-800 rounded-xl overflow-hidden shadow-2xl">
-        <div class="grid grid-cols-12 bg-slate-900/80 px-4 py-3 text-xs font-mono text-slate-400 border-b border-slate-800 font-bold text-center">
-          <div class="col-span-2">【狀態】</div>
-          <div class="col-span-2">【剩餘天數】</div>
-          <div class="col-span-6 text-left">【考科／重要日程與說明】</div>
-          <div class="col-span-2">【外部連動】</div>
-        </div>
-        <div class="divide-y divide-slate-800/80 text-xs">
-          <!-- 緊急 (紅燈) -->
-          <div class="grid grid-cols-12 px-4 py-4 items-center hover:bg-slate-900/40">
-            <div class="col-span-2 flex items-center justify-center gap-2">
-              <span class="w-2.5 h-2.5 rounded-full bg-red-500 shadow-lg animate-ping"></span>
-              <span class="px-2 py-0.5 rounded bg-red-500/20 text-red-400 border border-red-500/40 font-bold">緊急</span>
-            </div>
-            <div class="col-span-2 flex justify-center">
-              <div class="bg-amber-400/10 border border-amber-400/30 text-amber-300 font-mono text-lg font-black px-3 py-1 rounded shadow tracking-widest">D-07</div>
-            </div>
-            <div class="col-span-6 pr-4">
-              <span class="font-semibold px-1.5 py-0.5 bg-slate-800 border border-slate-700 rounded text-slate-300 mr-2">中教考科</span>
-              <span class="font-bold text-slate-100 text-sm">116年 全國教師資格考筆試測驗</span>
-              <p class="text-slate-400 mt-1">筆試：116.06.13，考場資訊與准考證開放下載，務必確認考場交通。</p>
-            </div>
-            <div class="col-span-2 flex justify-center">
-              <a href="https://calendar.google.com" target="_blank" class="px-2.5 py-1.5 bg-indigo-600/30 hover:bg-indigo-600 border border-indigo-500/50 rounded font-medium text-indigo-200 flex items-center gap-1">
-                <i class="fa-regular fa-calendar-check"></i> 加到日曆
-              </a>
-            </div>
+      <!-- 車站時刻表列表 -->
+      <div class="bg-slate-950 border border-slate-800 rounded-xl overflow-x-auto shadow-2xl">
+        <div class="min-w-[700px]">
+          <div class="grid grid-cols-12 bg-slate-900/90 px-4 py-3 text-xs font-mono text-slate-400 border-b border-slate-800 font-bold text-center">
+            <div class="col-span-2">【狀態】</div>
+            <div class="col-span-2">【剩餘天數】</div>
+            <div class="col-span-6 text-left">【考科／重要日程與說明】</div>
+            <div class="col-span-2">【外部連動】</div>
           </div>
-          <!-- 重要 (淺藍燈) -->
-          <div class="grid grid-cols-12 px-4 py-4 items-center hover:bg-slate-900/40">
-            <div class="col-span-2 flex items-center justify-center gap-2">
-              <span class="w-2.5 h-2.5 rounded-full bg-sky-400 shadow-lg"></span>
-              <span class="px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-500/40 font-bold">重要</span>
+          <div class="divide-y divide-slate-800/80 text-xs">
+            
+            <!-- 列 1：緊急 (紅燈) -->
+            <div class="grid grid-cols-12 px-4 py-4 items-center hover:bg-slate-900/40 transition">
+              <div class="col-span-2 flex items-center justify-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-red-500 shadow-lg animate-ping"></span>
+                <span class="px-2 py-0.5 rounded bg-red-500/20 text-red-400 border border-red-500/40 font-bold">緊急</span>
+              </div>
+              <div class="col-span-2 flex justify-center">
+                <div class="bg-amber-400/10 border border-amber-400/30 text-amber-300 font-mono text-lg font-black px-3 py-1 rounded shadow tracking-widest">
+                  D-07
+                </div>
+              </div>
+              <div class="col-span-6 pr-4">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="font-semibold px-1.5 py-0.5 bg-slate-800 border border-slate-700 rounded text-slate-300">中教考科</span>
+                  <span class="font-bold text-slate-100 text-sm">116年 全國教師資格考筆試測驗</span>
+                </div>
+                <p class="text-slate-400">筆試：116.06.13，考場資訊與准考證開放下載，請務必確認考場交通。</p>
+              </div>
+              <div class="col-span-2 flex justify-center">
+                <a href="https://calendar.google.com" target="_blank" class="px-2.5 py-1.5 bg-indigo-600/30 hover:bg-indigo-600 border border-indigo-500/50 rounded font-medium text-indigo-200 transition flex items-center gap-1">
+                  <i class="fa-regular fa-calendar-check"></i> 加到日曆
+                </a>
+              </div>
             </div>
-            <div class="col-span-2 flex justify-center">
-              <div class="bg-amber-400/10 border border-amber-400/30 text-amber-300 font-mono text-lg font-black px-3 py-1 rounded shadow tracking-widest">D-30</div>
+
+            <!-- 列 2：重要 (淺藍燈) -->
+            <div class="grid grid-cols-12 px-4 py-4 items-center hover:bg-slate-900/40 transition">
+              <div class="col-span-2 flex items-center justify-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-sky-400 shadow-lg"></span>
+                <span class="px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-500/40 font-bold">重要</span>
+              </div>
+              <div class="col-span-2 flex justify-center">
+                <div class="bg-amber-400/10 border border-amber-400/30 text-amber-300 font-mono text-lg font-black px-3 py-1 rounded shadow tracking-widest">
+                  D-30
+                </div>
+              </div>
+              <div class="col-span-6 pr-4">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="font-semibold px-1.5 py-0.5 bg-slate-800 border border-slate-700 rounded text-slate-300">特教考科</span>
+                  <span class="font-bold text-slate-100 text-sm">116學年度 各縣市公立教師甄選聯合簡章公告</span>
+                </div>
+                <p class="text-slate-400">報名期間 04.12~04.19，請詳閱身心障礙類組開缺與加註專長規定。</p>
+              </div>
+              <div class="col-span-2 flex justify-center">
+                <a href="https://calendar.google.com" target="_blank" class="px-2.5 py-1.5 bg-indigo-600/30 hover:bg-indigo-600 border border-indigo-500/50 rounded font-medium text-indigo-200 transition flex items-center gap-1">
+                  <i class="fa-regular fa-calendar-check"></i> 加到日曆
+                </a>
+              </div>
             </div>
-            <div class="col-span-6 pr-4">
-              <span class="font-semibold px-1.5 py-0.5 bg-slate-800 border border-slate-700 rounded text-slate-300 mr-2">特教考科</span>
-              <span class="font-bold text-slate-100 text-sm">116學年度 各縣市公立教師甄選聯合簡章公告</span>
-              <p class="text-slate-400 mt-1">聯合簡章公告，報名期間 04.12~04.19，注意特教科開缺與加註專長規定。</p>
+
+            <!-- 列 3：一般 (白燈) -->
+            <div class="grid grid-cols-12 px-4 py-4 items-center hover:bg-slate-900/40 transition">
+              <div class="col-span-2 flex items-center justify-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-slate-200 shadow"></span>
+                <span class="px-2 py-0.5 rounded bg-slate-700/60 text-slate-300 border border-slate-600 font-bold">一般</span>
+              </div>
+              <div class="col-span-2 flex justify-center">
+                <div class="bg-amber-400/10 border border-amber-400/30 text-amber-300 font-mono text-lg font-black px-3 py-1 rounded shadow tracking-widest">
+                  D-45
+                </div>
+              </div>
+              <div class="col-span-6 pr-4">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="font-semibold px-1.5 py-0.5 bg-slate-800 border border-slate-700 rounded text-slate-300">師培中心</span>
+                  <span class="font-bold text-slate-100 text-sm">115學年度教育實習成果冊送件截止</span>
+                </div>
+                <p class="text-slate-400">實習生請於期限前提交成果冊與教學演示評分表至師培中心辦公室。</p>
+              </div>
+              <div class="col-span-2 flex justify-center">
+                <a href="https://calendar.google.com" target="_blank" class="px-2.5 py-1.5 bg-indigo-600/30 hover:bg-indigo-600 border border-indigo-500/50 rounded font-medium text-indigo-200 transition flex items-center gap-1">
+                  <i class="fa-regular fa-calendar-check"></i> 加到日曆
+                </a>
+              </div>
             </div>
-            <div class="col-span-2 flex justify-center">
-              <a href="https://calendar.google.com" target="_blank" class="px-2.5 py-1.5 bg-indigo-600/30 hover:bg-indigo-600 border border-indigo-500/50 rounded font-medium text-indigo-200 flex items-center gap-1">
-                <i class="fa-regular fa-calendar-check"></i> 加到日曆
-              </a>
+
+            <!-- 列 4：一般 (白燈) -->
+            <div class="grid grid-cols-12 px-4 py-4 items-center hover:bg-slate-900/40 transition">
+              <div class="col-span-2 flex items-center justify-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-slate-200 shadow"></span>
+                <span class="px-2 py-0.5 rounded bg-slate-700/60 text-slate-300 border border-slate-600 font-bold">一般</span>
+              </div>
+              <div class="col-span-2 flex justify-center">
+                <div class="bg-amber-400/10 border border-amber-400/30 text-amber-300 font-mono text-lg font-black px-3 py-1 rounded shadow tracking-widest">
+                  D-60
+                </div>
+              </div>
+              <div class="col-span-6 pr-4">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="font-semibold px-1.5 py-0.5 bg-slate-800 border border-slate-700 rounded text-slate-300">讀書會</span>
+                  <span class="font-bold text-slate-100 text-sm">【實體讀書會】教甄非選與綜合題盲測實作演練</span>
+                </div>
+                <p class="text-slate-400">每週二 18:30 在師培 A302 研討室，請攜帶近五年申論歷屆試題。</p>
+              </div>
+              <div class="col-span-2 flex justify-center">
+                <a href="https://calendar.google.com" target="_blank" class="px-2.5 py-1.5 bg-indigo-600/30 hover:bg-indigo-600 border border-indigo-500/50 rounded font-medium text-indigo-200 transition flex items-center gap-1">
+                  <i class="fa-regular fa-calendar-check"></i> 加到日曆
+                </a>
+              </div>
             </div>
-          </div>
-          <!-- 一般 (白燈) -->
-          <div class="grid grid-cols-12 px-4 py-4 items-center hover:bg-slate-900/40">
-            <div class="col-span-2 flex items-center justify-center gap-2">
-              <span class="w-2.5 h-2.5 rounded-full bg-slate-200 shadow"></span>
-              <span class="px-2 py-0.5 rounded bg-slate-700/60 text-slate-300 border border-slate-600 font-bold">一般</span>
-            </div>
-            <div class="col-span-2 flex justify-center">
-              <div class="bg-amber-400/10 border border-amber-400/30 text-amber-300 font-mono text-lg font-black px-3 py-1 rounded shadow tracking-widest">D-45</div>
-            </div>
-            <div class="col-span-6 pr-4">
-              <span class="font-semibold px-1.5 py-0.5 bg-slate-800 border border-slate-700 rounded text-slate-300 mr-2">師培中心</span>
-              <span class="font-bold text-slate-100 text-sm">115學年度教育實習成果冊送件截止</span>
-              <p class="text-slate-400 mt-1">實習生請於期限前提交成果冊與教學演示評分表至師培中心辦公室。</p>
-            </div>
-            <div class="col-span-2 flex justify-center">
-              <a href="https://calendar.google.com" target="_blank" class="px-2.5 py-1.5 bg-indigo-600/30 hover:bg-indigo-600 border border-indigo-500/50 rounded font-medium text-indigo-200 flex items-center gap-1">
-                <i class="fa-regular fa-calendar-check"></i> 加到日曆
-              </a>
-            </div>
+
           </div>
         </div>
       </div>
     </section>
 
-    <!-- 2. 準教師會 -->
+    <!-- 模組 2：準教師會（成員名冊與個人學術足跡彙整） -->
     <section id="tab-members" class="tab-content space-y-4">
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- 左側：成員名冊 -->
         <div class="lg:col-span-4 bg-slate-800 border border-slate-700 rounded-xl p-4 space-y-3">
           <h3 class="text-sm font-bold text-slate-200 flex items-center gap-2">
-            <i class="fa-solid fa-users text-indigo-400"></i> 成員名冊列表 (12)
+            <i class="fa-solid fa-users text-indigo-400"></i> 讀書會成員名冊 (12)
           </h3>
           <div class="space-y-2">
-            <div class="p-3 rounded-lg bg-indigo-600/20 border-2 border-indigo-500 cursor-pointer">
+            
+            <!-- 成員 1：陳培生 -->
+            <div id="user-card-peisheng" onclick="selectMember('peisheng')" class="p-3 rounded-lg bg-indigo-600/20 border-2 border-indigo-500 cursor-pointer transition">
               <div class="flex justify-between items-center mb-1">
                 <span class="text-sm font-bold text-slate-100">陳培生</span>
                 <span class="text-[10px] bg-slate-800 text-indigo-300 border border-slate-700 px-1.5 py-0.5 rounded">管理員</span>
               </div>
-              <p class="text-xs text-slate-400">中等教育?教育科技/英文</p>
+              <p class="text-xs text-slate-400">中等教育・教育科技/英文</p>
               <div class="flex gap-4 mt-2 text-[10px] text-slate-400 pt-2 border-t border-slate-700/50">
                 <span>電子書: <b>8</b> 篇</span>
                 <span>出題: <b>24</b> 題</span>
                 <span>釋疑: <b>9</b> 則</span>
               </div>
             </div>
-            <div class="p-3 rounded-lg bg-slate-900/50 border border-slate-700 cursor-pointer hover:border-slate-500">
+
+            <!-- 成員 2：林特教 -->
+            <div id="user-card-lin" onclick="selectMember('lin')" class="p-3 rounded-lg bg-slate-900/50 border border-slate-700 cursor-pointer hover:border-slate-500 transition">
               <div class="flex justify-between items-center mb-1">
                 <span class="text-sm font-bold text-slate-200">林特教</span>
                 <span class="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-1.5 py-0.5 rounded">師培團隊</span>
               </div>
-              <p class="text-xs text-slate-400">特殊教育?身心障礙類</p>
+              <p class="text-xs text-slate-400">特殊教育・身心障礙類</p>
+              <div class="flex gap-4 mt-2 text-[10px] text-slate-400 pt-2 border-t border-slate-700/50">
+                <span>電子書: <b>11</b> 篇</span>
+                <span>出題: <b>18</b> 題</span>
+                <span>釋疑: <b>14</b> 則</span>
+              </div>
+            </div>
+
+            <!-- 成員 3：黃國文 -->
+            <div id="user-card-huang" onclick="selectMember('huang')" class="p-3 rounded-lg bg-slate-900/50 border border-slate-700 cursor-pointer hover:border-slate-500 transition">
+              <div class="flex justify-between items-center mb-1">
+                <span class="text-sm font-bold text-slate-200">黃國文</span>
+                <span class="text-[10px] bg-slate-800 text-slate-400 border border-slate-700 px-1.5 py-0.5 rounded">正式成員</span>
+              </div>
+              <p class="text-xs text-slate-400">中等教育・國文學科</p>
+              <div class="flex gap-4 mt-2 text-[10px] text-slate-400 pt-2 border-t border-slate-700/50">
+                <span>電子書: <b>5</b> 篇</span>
+                <span>出題: <b>12</b> 題</span>
+                <span>釋疑: <b>4</b> 則</span>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- 右側：個人學術足跡與成果彙整 -->
+        <div class="lg:col-span-8 bg-slate-800 border border-slate-700 rounded-xl p-5 space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-700 pb-3">
+            <div>
+              <h3 id="member-profile-name" class="text-base font-bold text-slate-100">陳培生 準教師 的個人學術足跡</h3>
+              <p class="text-xs text-slate-400">點選左側名冊即時動態彙整其文章、頭腦風暴試題與釋疑發言</p>
+            </div>
+            <span class="text-xs bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 px-3 py-1 rounded-full font-semibold">
+              教案核心貢獻者
+            </span>
+          </div>
+
+          <!-- 足跡內容卡 -->
+          <div id="member-footprints" class="space-y-3">
+            <div class="p-3.5 bg-slate-900 rounded-lg border border-slate-700">
+              <div class="flex justify-between items-center text-[10px] text-indigo-400 font-bold mb-1">
+                <span>【已撰寫電子書】教育心理學</span>
+                <span class="text-slate-500">2026-10-12 發布</span>
+              </div>
+              <h4 class="text-sm font-bold text-slate-200">巴夫洛夫經典條件制約架構解說 (含四階段圖解)</h4>
+              <p class="text-xs text-slate-400 mt-1">以非制約刺激與制約反應之四階段圖解分析，已關聯 AI 命題庫 (累積產生 14 題)。</p>
+            </div>
+
+            <div class="p-3.5 bg-slate-900 rounded-lg border border-slate-700">
+              <div class="flex justify-between items-center text-[10px] text-amber-400 font-bold mb-1">
+                <span>【頭腦風暴自由命題】情境問答題</span>
+                <span class="text-slate-500">2026-10-14 命題</span>
+              </div>
+              <h4 class="text-sm font-bold text-slate-200">正向行為支持 (PBS) 於課堂干擾行為之功能性評量應用</h4>
+              <p class="text-xs text-slate-400 mt-1">預設採分點規範與 15 行標準作答格式，目前共 14 位成員完成演練與釋疑。</p>
+            </div>
+
+            <div class="p-3.5 bg-slate-900 rounded-lg border border-slate-700">
+              <div class="flex justify-between items-center text-[10px] text-emerald-400 font-bold mb-1">
+                <span>【舉手釋疑紀錄】題目 #Q-1049</span>
+                <span class="text-slate-500">已結案 (答案已更新)</span>
+              </div>
+              <h4 class="text-sm font-bold text-slate-200">針對 114 年教資第 28 題之消退與負增強爭議提問</h4>
+              <p class="text-xs text-slate-400 mt-1">經管理員與師培團隊研討後，已更新試題詳解並加入考選部釋疑會議決議。</p>
             </div>
           </div>
         </div>
 
-        <div class="lg:col-span-8 bg-slate-800 border border-slate-700 rounded-xl p-5 space-y-4">
-          <div class="border-b border-slate-700 pb-3">
-            <h3 class="text-base font-bold text-slate-100">陳培生 準教師 的個人學術足跡</h3>
-            <p class="text-xs text-slate-400">點選成員即可在此彙整其所有發布之文章、頭腦風暴試題與留言釋疑。</p>
-          </div>
-          <div class="space-y-3">
-            <div class="p-3 bg-slate-900 rounded-lg border border-slate-700">
-              <span class="text-[10px] text-indigo-400 font-bold">【已撰寫電子書】</span>
-              <h4 class="text-sm font-bold text-slate-200 mt-1">巴夫洛夫經典條件制約架構解說 (含四階段圖解)</h4>
-              <p class="text-xs text-slate-400 mt-1">提供中立刺激與制約反應之圖解與表格比較，已關聯 AI 命題庫。</p>
-            </div>
-            <div class="p-3 bg-slate-900 rounded-lg border border-slate-700">
-              <span class="text-[10px] text-amber-400 font-bold">【頭腦風暴自由命題】</span>
-              <h4 class="text-sm font-bold text-slate-200 mt-1">情境問答題：正向行為支持 (PBS) 之功能性評量應用</h4>
-              <p class="text-xs text-slate-400 mt-1">預設採分點與 15 行標準作答格式，目前共 14 位成員演練過。</p>
-            </div>
-          </div>
-        </div>
       </div>
     </section>
 
-    <!-- 3. 電子書 -->
+    <!-- 模組 3：電子書（主題式圖像解說） -->
     <section id="tab-ebook" class="tab-content space-y-4">
       <div class="bg-slate-800 border border-slate-700 rounded-xl p-6 space-y-5">
         <div class="border-b border-slate-700 pb-4 flex flex-col sm:flex-row justify-between sm:items-center gap-3">
           <div>
-            <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-indigo-500/20 text-indigo-300 border border-indigo-500/40">
-              教育心理學
-            </span>
-            <h2 class="text-lg font-bold text-slate-100 mt-1">巴夫洛夫古典制約作用（Classical Conditioning）核心要素</h2>
+            <div class="flex items-center gap-2 mb-1">
+              <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-indigo-500/20 text-indigo-300 border border-indigo-500/40">
+                教育心理學
+              </span>
+              <span class="text-xs text-slate-400">中等教育・教育理念與實務</span>
+            </div>
+            <h2 class="text-xl font-bold text-slate-100">巴夫洛夫古典制約作用（Classical Conditioning）核心要素</h2>
           </div>
+          <!-- 跨模組直通按鈕 -->
           <button onclick="switchTab('exam'); showExamPaper();" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-lg shadow-md flex items-center gap-1.5 transition">
             <i class="fa-solid fa-play"></i> 針對此篇測驗 (AI出題)
           </button>
         </div>
 
-        <div class="bg-slate-950 p-4 rounded-lg border border-slate-800 text-center text-xs">
-          <div class="text-indigo-400 font-bold mb-3">【制約學習歷程視覺圖解】</div>
-          <div class="flex flex-wrap items-center justify-center gap-2 text-slate-200 font-mono">
-            <span class="px-3 py-1.5 bg-slate-800 border border-slate-700 rounded">中性刺激 (鈴聲)</span>
-            <span>＋</span>
-            <span class="px-3 py-1.5 bg-blue-900/60 border border-blue-500 rounded text-blue-200">非制約刺激 (食物)</span>
-            <span>?</span>
-            <span class="px-3 py-1.5 bg-emerald-900/60 border border-emerald-500 rounded text-emerald-200">制約反應 (唾液分泌)</span>
+        <!-- 觀念摘要 -->
+        <div class="text-xs leading-relaxed text-slate-300 space-y-2">
+          <p><b>【核心定義】</b> 中性刺激（NS）經多次與非制約刺激（UCS）配對伴隨出現後，轉化為制約刺激（CS），進而能單獨誘發制約反應（CR）。</p>
+          <p><b>【教資教甄常考點】</b> 消退（Extinction）並非遺忘，而是新的抑制作用；刺激類化與刺激辨別在學校恐懼症或情緒學習上的延伸應用。</p>
+        </div>
+
+        <!-- 流程圖解區塊 -->
+        <div class="bg-slate-950 p-5 rounded-lg border border-slate-800 text-center text-xs">
+          <div class="text-indigo-400 font-bold mb-4 flex items-center justify-center gap-1.5">
+            <i class="fa-solid fa-diagram-project"></i> 【制約學習歷程架構圖解】
           </div>
+          <div class="flex flex-wrap items-center justify-center gap-3 text-slate-200 font-mono">
+            <span class="px-3.5 py-2 bg-slate-800 border border-slate-700 rounded shadow">中性刺激 (鈴聲)</span>
+            <span class="text-base font-bold text-indigo-400">＋</span>
+            <span class="px-3.5 py-2 bg-blue-900/60 border border-blue-500 rounded text-blue-200 shadow">非制約刺激 (食物)</span>
+            <span class="text-base font-bold text-indigo-400">➔</span>
+            <span class="px-3.5 py-2 bg-emerald-900/60 border border-emerald-500 rounded text-emerald-200 shadow">制約反應 (唾液分泌)</span>
+          </div>
+        </div>
+
+        <!-- 四大要素對照表格 -->
+        <div class="overflow-x-auto pt-2">
+          <table class="w-full text-left text-xs border border-slate-700 border-collapse">
+            <thead class="bg-slate-900/80 text-slate-300 font-semibold border-b border-slate-700">
+              <tr>
+                <th class="p-2.5 border-r border-slate-700">要素名稱</th>
+                <th class="p-2.5 border-r border-slate-700">實驗實例（巴夫洛夫犬）</th>
+                <th class="p-2.5">校園情境應用實例</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-700 text-slate-300 bg-slate-900/30">
+              <tr>
+                <td class="p-2.5 font-bold text-indigo-300 border-r border-slate-700">非制約刺激 (UCS)</td>
+                <td class="p-2.5 border-r border-slate-700">肉粉／食物</td>
+                <td class="p-2.5">教師當眾嚴厲斥責或懲處</td>
+              </tr>
+              <tr>
+                <td class="p-2.5 font-bold text-indigo-300 border-r border-slate-700">非制約反應 (UCR)</td>
+                <td class="p-2.5 border-r border-slate-700">分泌唾液</td>
+                <td class="p-2.5">學生感到焦慮、心跳加速、害怕</td>
+              </tr>
+              <tr>
+                <td class="p-2.5 font-bold text-indigo-300 border-r border-slate-700">制約刺激 (CS)</td>
+                <td class="p-2.5 border-r border-slate-700">鈴聲（配對後）</td>
+                <td class="p-2.5">特定上課鐘聲、數學課本封面</td>
+              </tr>
+              <tr>
+                <td class="p-2.5 font-bold text-indigo-300 border-r border-slate-700">制約反應 (CR)</td>
+                <td class="p-2.5 border-r border-slate-700">聞鈴聲即流唾液</td>
+                <td class="p-2.5">看見數學課本就引發胃痛或拒學</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </section>
 
-    <!-- 4. 超會考 -->
+    <!-- 模組 4：超會考（自動出題機 ＋ 仿教資試卷答案卷） -->
     <section id="tab-exam" class="tab-content space-y-4">
-      <!-- 篩選器視圖 -->
+      
+      <!-- 視圖 A：自動出題機篩選器 -->
       <div id="exam-filter" class="bg-slate-800 border border-slate-700 rounded-xl p-6 space-y-6">
-        <div class="border-b border-slate-700 pb-3">
-          <h3 class="text-base font-bold text-slate-100 flex items-center gap-2">
-            <i class="fa-solid fa-sliders text-indigo-400"></i> 自動出題機（階層式題庫篩選）
-          </h3>
-          <p class="text-xs text-slate-400">仿出版社命題操作?靈活配置國家考科與師培文章章節</p>
+        <div class="border-b border-slate-700 pb-3 flex justify-between items-center">
+          <div>
+            <h3 class="text-base font-bold text-slate-100 flex items-center gap-2">
+              <i class="fa-solid fa-sliders text-indigo-400"></i> 自動出題機（階層式題庫篩選）
+            </h3>
+            <p class="text-xs text-slate-400">仿出版社命題操作架構・自由配置國家考科與師培文章章節標籤</p>
+          </div>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-xs">
+          <!-- 步驟 1 -->
           <div class="bg-slate-900 p-4 rounded-lg border border-slate-700 space-y-2">
             <h4 class="font-bold text-indigo-300">1. 選擇國家考科</h4>
-            <button class="w-full text-left p-2 rounded bg-indigo-600 text-white font-medium">教育理念與實務</button>
+            <button class="w-full text-left p-2 rounded bg-indigo-600 text-white font-medium flex justify-between">
+              <span>教育理念與實務</span>
+              <i class="fa-solid fa-check text-xs"></i>
+            </button>
             <button class="w-full text-left p-2 rounded bg-slate-800 text-slate-300 hover:bg-slate-700">學習者發展與適性輔導</button>
+            <button class="w-full text-left p-2 rounded bg-slate-800 text-slate-300 hover:bg-slate-700">課程教學與評量</button>
           </div>
+
+          <!-- 步驟 2 -->
           <div class="bg-slate-900 p-4 rounded-lg border border-slate-700 space-y-2">
             <h4 class="font-bold text-indigo-300">2. 篩選電子書章節標籤</h4>
-            <label class="flex items-center space-x-2"><input type="checkbox" checked class="rounded text-indigo-600"> <span>教育心理學 (古典制約)</span></label>
-            <label class="flex items-center space-x-2"><input type="checkbox" checked class="rounded text-indigo-600"> <span>正向行為支持 (PBS)</span></label>
+            <label class="flex items-center space-x-2 cursor-pointer">
+              <input type="checkbox" checked class="rounded text-indigo-600">
+              <span class="text-slate-200">教育心理學 (古典制約/行為主義)</span>
+            </label>
+            <label class="flex items-center space-x-2 cursor-pointer">
+              <input type="checkbox" checked class="rounded text-indigo-600">
+              <span class="text-slate-200">正向行為支持 (PBS 三級介入)</span>
+            </label>
+            <label class="flex items-center space-x-2 cursor-pointer">
+              <input type="checkbox" class="rounded text-indigo-600">
+              <span class="text-slate-200">教育哲學 (皮特斯教育三大規準)</span>
+            </label>
           </div>
+
+          <!-- 步驟 3 -->
           <div class="bg-slate-900 p-4 rounded-lg border border-slate-700 space-y-2">
-            <h4 class="font-bold text-indigo-300">3. 題型與題數配置</h4>
-            <div class="flex justify-between items-center"><span>單選題 (題數)</span><input type="number" value="5" class="w-12 bg-slate-800 border border-slate-600 rounded px-1.5 py-0.5 text-center"></div>
-            <div class="flex justify-between items-center"><span>非選問答題</span><input type="number" value="1" class="w-12 bg-slate-800 border border-slate-600 rounded px-1.5 py-0.5 text-center"></div>
+            <h4 class="font-bold text-indigo-300">3. 題型配置與題數</h4>
+            <div class="flex justify-between items-center">
+              <span>單選題 (題數)</span>
+              <input type="number" value="5" class="w-14 bg-slate-800 border border-slate-600 rounded px-2 py-1 text-center font-bold">
+            </div>
+            <div class="flex justify-between items-center">
+              <span>非選問答題</span>
+              <input type="number" value="1" class="w-14 bg-slate-800 border border-slate-600 rounded px-2 py-1 text-center font-bold">
+            </div>
+            <div class="pt-2 border-t border-slate-700 space-y-1">
+              <label class="flex items-center space-x-2 cursor-pointer">
+                <input type="radio" name="source" checked class="text-indigo-600">
+                <span>從共享題庫挑選 (共 284 題)</span>
+              </label>
+              <label class="flex items-center space-x-2 cursor-pointer">
+                <input type="radio" name="source" class="text-indigo-600">
+                <span>由 AI 即時全新生成</span>
+              </label>
+            </div>
           </div>
         </div>
 
-        <div class="flex justify-end pt-2 border-t border-slate-700">
-          <button onclick="showExamPaper()" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-lg shadow-lg flex items-center gap-2">
-            <i class="fa-solid fa-play"></i> 開始測驗（載入教資仿真答案卷）
+        <div class="flex justify-end pt-3 border-t border-slate-700">
+          <button onclick="showExamPaper()" class="px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white font-bold text-xs rounded-lg shadow-lg flex items-center gap-2 transition">
+            <i class="fa-solid fa-play"></i> 開始測驗（載入教資仿真試卷）
           </button>
         </div>
       </div>
 
-      <!-- 模擬試卷視圖 -->
+      <!-- 視圖 B：模擬官方答案卷作答區 -->
       <div id="exam-paper" class="hidden bg-slate-800 border border-slate-700 rounded-xl p-6 space-y-4">
         <div class="flex justify-between items-center border-b border-slate-700 pb-3">
           <div>
-            <span class="text-xs text-indigo-400 font-bold">116年 教師資格考試 模擬答案卷</span>
+            <span class="text-xs text-indigo-400 font-bold">116年 高級中等以下教師資格考試 模擬答案卷</span>
             <h3 class="text-base font-bold text-slate-100">教育理念與實務 - 綜合題（情境非選）</h3>
           </div>
-          <button onclick="showExamFilter()" class="text-xs text-slate-400 hover:text-slate-200">
-            <i class="fa-solid fa-arrow-left mr-1"></i> 返回篩選器
+          <button onclick="showExamFilter()" class="text-xs text-slate-400 hover:text-slate-200 transition">
+            <i class="fa-solid fa-arrow-left mr-1"></i> 返回出題篩選器
           </button>
         </div>
 
-        <div class="bg-slate-900/80 p-3 rounded-lg border border-slate-700 text-xs text-slate-300 leading-relaxed">
-          <b>【情境案例】</b> 某生課堂屢次發出噪音干擾教學，評量確認係為尋求教師與同儕關注。請回答：<br/>
-          (一) 依「正向行為支持 (PBS)」說明教師如何進行前置事件介入？ (8分)<br/>
-          (二) 列舉兩項親師合作之具體改善策略。 (7分)
+        <!-- 情境題幹 -->
+        <div class="bg-slate-900/80 p-3.5 rounded-lg border border-slate-700 text-xs text-slate-300 leading-relaxed">
+          <b>【情境案例】</b> 某生於課堂常無故起立發出干擾聲響，經功能性行為評量確認係為尋求同儕與教師關注。請回答以下子題：<br/>
+          (一) 請依「正向行為支持 (PBS)」說明教師應如何進行前置事件介入？ (8分)<br/>
+          (二) 請列舉兩項親師合作之具體改善策略。 (7分)
         </div>
 
-        <!-- 試卷格線與行號 -->
+        <!-- 試卷格線與即時行數監控 -->
         <div class="space-y-1">
-          <div class="flex justify-between text-[11px] text-slate-400">
-            <span>官方作答橫線格（限 15 行內完成）</span>
-            <span id="line-counter" class="text-slate-400">行數：3 / 15 行</span>
+          <div class="flex justify-between text-[11px]">
+            <span class="text-slate-400">作答區域（限 15 行內完成，橫條底線模擬）</span>
+            <span id="line-counter" class="text-slate-400 font-bold">行數：3 / 15 行</span>
           </div>
-          <div class="border border-slate-600 rounded-lg bg-slate-950 p-2">
-            <textarea id="paper-textarea" rows="8" oninput="updateLineCount()" class="w-full bg-transparent text-slate-100 text-xs leading-[28px] focus:outline-none resize-none font-mono" style="background-image: linear-gradient(transparent 27px, #334155 28px); background-size: 100% 28px;">一、 (一) 依據正向行為支持理論，該生干擾行為功能為「尋求關注」；教師應進行座位調整並給予即時正向增強。
-(二) 親師合作具體策略：1. 訂定每日親師聯絡檢核單；2. 建立一致性正向行為契約。</textarea>
+          <div class="border border-slate-600 rounded-lg bg-slate-950 p-2 overflow-hidden shadow-inner">
+            <textarea id="paper-textarea" rows="8" oninput="updateLineCount()" class="w-full bg-transparent text-slate-100 text-xs exam-ruled-lines focus:outline-none resize-none font-mono">一、 (一) 依據正向行為支持理論，該生課堂行為主要功能為「尋求關注」；教師在進行前置事件干預時，應調整其座位至前排，並在表現專注行為時給予即時正向增強。
+(二) 具體親師合作做法：1. 建立聯絡簿每日行為檢核單；2. 訂定一致性正向行為契約。</textarea>
           </div>
         </div>
 
+        <!-- 底部互動按鈕 -->
         <div class="flex justify-between items-center pt-2">
-          <button onclick="alert('已發起舉手！此題爭議已記錄至讀書會資料庫。')" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs rounded">
+          <button onclick="alert('🙋‍♂️ 已發起舉手釋疑！此題之爭議已寫入讀書會資料庫。')" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs rounded transition flex items-center gap-1.5">
+            <i class="fa-solid fa-hand"></i> 舉手釋疑此題
+          </button>
+          <button onclick="alert('交卷成功！Gemini AI 正依據教育部評分標準（採分點）進行即時批改...')" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-lg shadow flex items-center gap-1.5 transition">
+            <i class="fa-solid fa-paper-plane"></i> 交卷並由 AI 批改
+          </button>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- 互動控制 JavaScript (完整無截斷) -->
+  <script>
+    // 頁籤切換邏輯
+    function switchTab(tabId) {
+      // 1. 隱藏所有分頁
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+      
+      // 2. 顯示目標分頁
+      const target = document.getElementById('tab-' + tabId);
+      if (target) {
+        target.classList.add('active');
+      }
+
+      // 3. 更新按鈕樣式
+      ['bulletin', 'members', 'ebook', 'exam'].forEach(id => {
+        const btn = document.getElementById('nav-' + id);
+        if (btn) {
+          if (id === tabId) {
+            btn.className = "px-3 py-1.5 rounded-md bg-indigo-600 text-white transition";
+          } else {
+            btn.className = "px-3 py-1.5 rounded-md text-slate-400 hover:text-slate-200 transition";
+          }
+        }
+      });
+    }
+
+    // 超會考：切換篩選器與試卷
+    function showExamPaper() {
+      document.getElementById('exam-filter').classList.add('hidden');
+      document.getElementById('exam-paper').classList.remove('hidden');
+    }
+
+    function showExamFilter() {
+      document.getElementById('exam-paper').classList.add('hidden');
+      document.getElementById('exam-filter').classList.remove('hidden');
+    }
+
+    // 試卷行數監控與防溢出提示
+    function updateLineCount() {
+      const textarea = document.getElementById('paper-textarea');
+      if (!textarea) return;
+      const lines = textarea.value.split('\n').length;
+      const counter = document.getElementById('line-counter');
+      if (counter) {
+        counter.innerText = '行數：' + lines + ' / 15 行';
+        if (lines > 15) {
+          counter.className = 'text-red-400 font-bold';
+        } else {
+          counter.className = 'text-slate-400 font-bold';
+        }
+      }
+    }
+
+    // 準教師會：點擊名單切換右側學術足跡
+    function selectMember(memberKey) {
+      ['peisheng', 'lin', 'huang'].forEach(k => {
+        const card = document.getElementById('user-card-' + k);
+        if (card) {
+          if (k === memberKey) {
+            card.className = "p-3 rounded-lg bg-indigo-600/20 border-2 border-indigo-500 cursor-pointer transition";
+          } else {
+            card.className = "p-3 rounded-lg bg-slate-900/50 border border-slate-700 cursor-pointer hover:border-slate-500 transition";
+          }
+        }
+      });
+
+      const nameEl = document.getElementById('member-profile-name');
+      const footprintsEl = document.getElementById('member-footprints');
+
+      if (memberKey === 'peisheng') {
+        nameEl.innerText = "陳培生 準教師 的個人學術足跡";
+        footprintsEl.innerHTML = `
+          <div class="p-3.5 bg-slate-900 rounded-lg border border-slate-700">
+            <div class="flex justify-between items-center text-[10px] text-indigo-400 font-bold mb-1">
+              <span>【已撰寫電子書】教育心理學</span>
+              <span class="text-slate-500">2026-10-12 發布</span>
+            </div>
+            <h4 class="text-sm font-bold text-slate-200">巴夫洛夫經典條件制約架構解說 (含四階段圖解)</h4>
+            <p class="text-xs text-slate-400 mt-1">以非制約刺激與制約反應之四階段圖解分析，已關聯 AI 命題庫 (累積產生 14 題)。</p>
+          </div>
+          <div class="p-3.5 bg-slate-900 rounded-lg border border-slate-700">
+            <div class="flex justify-between items-center text-[10px] text-amber-400 font-bold mb-1">
+              <span>【頭腦風暴自由命題】情境問答題</span>
+              <span class="text-slate-500">2026-10-14 命題</span>
+            </div>
+            <h4 class="text-sm font-bold text-slate-200">正向行為支持 (PBS) 於課堂干擾行為之功能性評量應用</h4>
+            <p class="text-xs text-slate-400 mt-1">預設採分點規範與 15 行標準作答格式，目前共 14 位成員完成演練與釋疑。</p>
+          </div>
+        `;
+      } else if (memberKey === 'lin') {
+        nameEl.innerText = "林特教 準教師 的個人學術足跡";
+        footprintsEl.innerHTML = `
+          <div class="p-3.5 bg-slate-900 rounded-lg border border-slate-700">
+            <div class="flex justify-between items-center text-[10px] text-indigo-400 font-bold mb-1">
+              <span>【已撰寫電子書】特殊教育學生評量</span>
+              <span class="text-slate-500">2026-09-30 發布</span>
+            </div>
+            <h4 class="text-sm font-bold text-slate-200">個別化教育計畫 (IEP) 法定內容與轉銜會議流程心智圖</h4>
+            <p class="text-xs text-slate-400 mt-1">含特教法規規範檢核表，已由師培團隊標註為精選教案。</p>
+          </div>
+          <div class="p-3.5 bg-slate-900 rounded-lg border border-slate-700">
+            <div class="flex justify-between items-center text-[10px] text-emerald-400 font-bold mb-1">
+              <span>【舉手釋疑紀錄】題目 #Q-0982</span>
+              <span class="text-slate-500">已結案</span>
+            </div>
+            <h4 class="text-sm font-bold text-slate-200">身心障礙學生特殊需求領域課程綱要之十二年國教銜接疑義</h4>
+            <p class="text-xs text-slate-400 mt-1">針對生活管理與職業教育之學分認列標準進行論證。</p>
+          </div>
+        `;
+      } else {
+        nameEl.innerText = "黃國文 準教師 的個人學術足跡";
+        footprintsEl.innerHTML = `
+          <div class="p-3.5 bg-slate-900 rounded-lg border border-slate-700">
+            <div class="flex justify-between items-center text-[10px] text-indigo-400 font-bold mb-1">
+              <span>【已撰寫電子書】課程發展與設計</span>
+              <span class="text-slate-500">2026-10-05 發布</span>
+            </div>
+            <h4 class="text-sm font-bold text-slate-200">泰勒法則 (Tyler Rationale) 四大基本問題與逆向設計 (UbD) 比較</h4>
+            <p class="text-xs text-slate-400 mt-1">教甄教案設計常考題型重點整理。</p>
+          </div>
+        `;
+      }
+    }
+
+    // 模擬成員身分切換 (正式成員 vs 待審核)
+    let isMember = true;
+    function toggleRole() {
+      isMember = !isMember;
+      const text = document.getElementById('role-text');
+      const btn = document.getElementById('role-btn');
+      if (isMember) {
+        text.innerText = '正式成員 (點擊切換)';
+        btn.className = 'px-2.5 py-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 transition flex items-center gap-1.5';
+      } else {
+        text.innerText = '待審核 (點擊切換)';
+        btn.className = 'px-2.5 py-1 rounded-full border border-amber-500/30 bg-amber-500/10 text-amber-400 transition flex items-center gap-1.5';
+      }
+    }
+  </script>
+</body>
+</html>
