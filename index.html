@@ -4,34 +4,19 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>準教師戰鬥營 - 教資教甄線上讀書會系統</title>
+  
+  <!-- 載入 Supabase SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <!-- 載入 Tailwind CSS 與 FontAwesome 圖示 -->
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
-  <!-- Tailwind 客製主題配置 -->
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            station: {
-              board: '#090d16',
-              gold: '#fbbf24',
-              goldBg: '#1e1b11'
-            }
-          }
-        }
-      }
-    }
-  </script>
-
   <style>
     /* 分頁顯示邏輯 */
     .tab-content { display: none; }
     .tab-content.active { display: block; }
 
-    /* 仿教育部教資試卷：每行 32px 橫線與真實手寫格感 */
+    /* 仿教育部教資試卷：每行 32px 橫線 */
     .exam-ruled-lines {
       background-image: linear-gradient(transparent 31px, #334155 32px);
       background-size: 100% 32px;
@@ -41,7 +26,7 @@
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen font-sans flex flex-col">
 
-  <!-- 頂部功能導覽列 (支援手機版多行自適應) -->
+  <!-- 頂部功能導覽列 -->
   <header class="bg-slate-800 border-b border-slate-700 px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3 sticky top-0 z-30 shadow-md">
     <div class="flex items-center space-x-3 cursor-pointer" onclick="switchTab('bulletin')">
       <div class="bg-indigo-600 text-white p-2 rounded-lg text-lg font-bold shadow-md">
@@ -56,7 +41,7 @@
       </div>
     </div>
 
-    <!-- 導航分頁按鈕 (手機也能直接點擊) -->
+    <!-- 導航分頁按鈕 -->
     <nav class="flex items-center gap-1.5 text-xs font-semibold overflow-x-auto py-1">
       <button id="nav-bulletin" onclick="switchTab('bulletin')" class="px-3 py-1.5 rounded-md bg-indigo-600 text-white transition">
         <i class="fa-solid fa-bullhorn mr-1"></i>布告欄
@@ -72,15 +57,12 @@
       </button>
     </nav>
 
-    <!-- 角色權限模擬切換 -->
     <!-- 登入狀態控制區 -->
     <div id="auth-container" class="flex items-center space-x-2 text-xs">
-      <!-- 未登入時顯示：Google 登入按鈕 -->
       <button id="btn-login" onclick="loginWithGoogle()" class="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold transition flex items-center gap-1.5 shadow">
         <i class="fa-brands fa-google"></i> Google 登入
       </button>
-    
-      <!-- 登入後顯示：頭像、姓名、身分狀態、登出按鈕 (預設隱藏) -->
+
       <div id="user-info" class="hidden flex items-center space-x-3">
         <img id="user-avatar" src="" alt="avatar" class="w-7 h-7 rounded-full border border-indigo-400">
         <div class="text-left hidden sm:block">
@@ -97,29 +79,28 @@
   <!-- 主內容容器 -->
   <main class="relative min-h-[500px] flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6">
 
-  <!-- 待審核權限鎖定提示遮罩 (預設隱藏 hidden) -->
-  <div id="pending-lock-overlay" class="hidden absolute inset-0 z-40 bg-slate-950/80 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center rounded-xl border border-amber-500/30">
-    <div class="w-16 h-16 rounded-full bg-amber-500/10 border border-amber-500/40 flex items-center justify-center text-amber-400 text-2xl mb-4 shadow-lg shadow-amber-500/10 animate-pulse">
-      <i class="fa-solid fa-user-clock"></i>
+    <!-- 待審核權限鎖定提示遮罩 (預設隱藏 hidden) -->
+    <div id="pending-lock-overlay" class="hidden absolute inset-0 z-40 bg-slate-950/80 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center rounded-xl border border-amber-500/30">
+      <div class="w-16 h-16 rounded-full bg-amber-500/10 border border-amber-500/40 flex items-center justify-center text-amber-400 text-2xl mb-4 shadow-lg shadow-amber-500/10 animate-pulse">
+        <i class="fa-solid fa-user-clock"></i>
+      </div>
+      <h3 id="overlay-title" class="text-xl font-bold text-slate-100 mb-2">身分資格審核中</h3>
+      <p id="overlay-desc" class="text-sm text-slate-400 max-w-md leading-relaxed mb-6">
+        歡迎加入準教師戰鬥營！您目前的身分為 <span class="text-amber-400 font-semibold font-mono">待審核 (pending)</span>。<br>
+        為確保讀書會社群與命題品質，核心試題庫、電子書與互動功能需待管理團隊確認教育學程身分後開通。
+      </p>
+      <div class="flex items-center gap-3">
+        <button onclick="switchTab('bulletin')" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold border border-slate-700 transition flex items-center gap-2">
+          <i class="fa-solid fa-arrow-left"></i> 回到車站布告欄
+        </button>
+        <a href="https://line.me" target="_blank" class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow transition flex items-center gap-2">
+          <i class="fa-brands fa-line"></i> 聯繫管理員審核
+        </a>
+      </div>
     </div>
-    <h3 class="text-xl font-bold text-slate-100 mb-2">身分資格審核中</h3>
-    <p class="text-sm text-slate-400 max-w-md leading-relaxed mb-6">
-      歡迎加入準教師戰鬥營！您目前的身分為 <span class="text-amber-400 font-semibold font-mono">待審核 (pending)</span>。<br>
-      為確保讀書會社群與命題品質，核心試題庫、電子書與互動功能需待管理團隊確認教育學程身分後開通。
-    </p>
-    <div class="flex items-center gap-3">
-      <button onclick="switchTab('tab-station')" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold border border-slate-700 transition flex items-center gap-2">
-        <i class="fa-solid fa-arrow-left"></i> 回到車站布告欄
-      </button>
-      <a href="https://line.me" target="_blank" class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow transition flex items-center gap-2">
-        <i class="fa-brands fa-line"></i> 聯繫管理員審核
-      </a>
-    </div>
-  </div>
-    
+
     <!-- 模組 1：布告欄（車站電子時刻表風格） -->
     <section id="tab-bulletin" class="tab-content active space-y-4">
-      <!-- 標題看版與電子鐘 -->
       <div class="bg-slate-950 border border-slate-800 rounded-xl p-5 shadow-2xl flex flex-col md:flex-row items-center justify-between gap-4">
         <div>
           <h2 class="text-xl font-black tracking-wider text-amber-400 flex items-center gap-2">
@@ -127,12 +108,11 @@
           </h2>
           <p class="text-xs text-slate-400 mt-1 font-mono tracking-wider">STATION DEPARTURE NOTICE BOARD - TAIWAN CTE</p>
         </div>
-        <div class="bg-slate-900 border border-slate-700 px-5 py-2 rounded-lg text-2xl font-mono font-bold text-amber-400 tracking-widest shadow-inner">
-          14:47:21
+        <div id="live-clock" class="bg-slate-900 border border-slate-700 px-5 py-2 rounded-lg text-2xl font-mono font-bold text-amber-400 tracking-widest shadow-inner">
+          --:--:--
         </div>
       </div>
 
-      <!-- 車站時刻表列表 -->
       <div class="bg-slate-950 border border-slate-800 rounded-xl overflow-x-auto shadow-2xl">
         <div class="min-w-[700px]">
           <div class="grid grid-cols-12 bg-slate-900/90 px-4 py-3 text-xs font-mono text-slate-400 border-b border-slate-800 font-bold text-center">
@@ -141,247 +121,71 @@
             <div class="col-span-6 text-left">【考科／重要日程與說明】</div>
             <div class="col-span-2">【外部連動】</div>
           </div>
+          <!-- 動態公告由 JavaScript 注入 -->
           <div id="notice-list-container" class="divide-y divide-slate-800/80 text-xs">
-          <!-- 載入中骨架屏或預設提示 -->
-          <div class="p-6 text-center text-slate-500 font-mono">載入最新公告中...</div>
-          </div>
-            <!-- 列 1：緊急 (紅燈) -->
-            <div class="grid grid-cols-12 px-4 py-4 items-center hover:bg-slate-900/40 transition">
-              <div class="col-span-2 flex items-center justify-center gap-2">
-                <span class="w-2.5 h-2.5 rounded-full bg-red-500 shadow-lg animate-ping"></span>
-                <span class="px-2 py-0.5 rounded bg-red-500/20 text-red-400 border border-red-500/40 font-bold">緊急</span>
-              </div>
-              <div class="col-span-2 flex justify-center">
-                <div class="bg-amber-400/10 border border-amber-400/30 text-amber-300 font-mono text-lg font-black px-3 py-1 rounded shadow tracking-widest">
-                  D-07
-                </div>
-              </div>
-              <div class="col-span-6 pr-4">
-                <div class="flex items-center gap-2 mb-1">
-                  <span class="font-semibold px-1.5 py-0.5 bg-slate-800 border border-slate-700 rounded text-slate-300">中教考科</span>
-                  <span class="font-bold text-slate-100 text-sm">116年 全國教師資格考筆試測驗</span>
-                </div>
-                <p class="text-slate-400">筆試：116.06.13，考場資訊與准考證開放下載，請務必確認考場交通。</p>
-              </div>
-              <div class="col-span-2 flex justify-center">
-                <a href="https://calendar.google.com" target="_blank" class="px-2.5 py-1.5 bg-indigo-600/30 hover:bg-indigo-600 border border-indigo-500/50 rounded font-medium text-indigo-200 transition flex items-center gap-1">
-                  <i class="fa-regular fa-calendar-check"></i> 加到日曆
-                </a>
-              </div>
-            </div>
-
-            <!-- 列 2：重要 (淺藍燈) -->
-            <div class="grid grid-cols-12 px-4 py-4 items-center hover:bg-slate-900/40 transition">
-              <div class="col-span-2 flex items-center justify-center gap-2">
-                <span class="w-2.5 h-2.5 rounded-full bg-sky-400 shadow-lg"></span>
-                <span class="px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-500/40 font-bold">重要</span>
-              </div>
-              <div class="col-span-2 flex justify-center">
-                <div class="bg-amber-400/10 border border-amber-400/30 text-amber-300 font-mono text-lg font-black px-3 py-1 rounded shadow tracking-widest">
-                  D-30
-                </div>
-              </div>
-              <div class="col-span-6 pr-4">
-                <div class="flex items-center gap-2 mb-1">
-                  <span class="font-semibold px-1.5 py-0.5 bg-slate-800 border border-slate-700 rounded text-slate-300">特教考科</span>
-                  <span class="font-bold text-slate-100 text-sm">116學年度 各縣市公立教師甄選聯合簡章公告</span>
-                </div>
-                <p class="text-slate-400">報名期間 04.12~04.19，請詳閱身心障礙類組開缺與加註專長規定。</p>
-              </div>
-              <div class="col-span-2 flex justify-center">
-                <a href="https://calendar.google.com" target="_blank" class="px-2.5 py-1.5 bg-indigo-600/30 hover:bg-indigo-600 border border-indigo-500/50 rounded font-medium text-indigo-200 transition flex items-center gap-1">
-                  <i class="fa-regular fa-calendar-check"></i> 加到日曆
-                </a>
-              </div>
-            </div>
-
-            <!-- 列 3：一般 (白燈) -->
-            <div class="grid grid-cols-12 px-4 py-4 items-center hover:bg-slate-900/40 transition">
-              <div class="col-span-2 flex items-center justify-center gap-2">
-                <span class="w-2.5 h-2.5 rounded-full bg-slate-200 shadow"></span>
-                <span class="px-2 py-0.5 rounded bg-slate-700/60 text-slate-300 border border-slate-600 font-bold">一般</span>
-              </div>
-              <div class="col-span-2 flex justify-center">
-                <div class="bg-amber-400/10 border border-amber-400/30 text-amber-300 font-mono text-lg font-black px-3 py-1 rounded shadow tracking-widest">
-                  D-45
-                </div>
-              </div>
-              <div class="col-span-6 pr-4">
-                <div class="flex items-center gap-2 mb-1">
-                  <span class="font-semibold px-1.5 py-0.5 bg-slate-800 border border-slate-700 rounded text-slate-300">師培中心</span>
-                  <span class="font-bold text-slate-100 text-sm">115學年度教育實習成果冊送件截止</span>
-                </div>
-                <p class="text-slate-400">實習生請於期限前提交成果冊與教學演示評分表至師培中心辦公室。</p>
-              </div>
-              <div class="col-span-2 flex justify-center">
-                <a href="https://calendar.google.com" target="_blank" class="px-2.5 py-1.5 bg-indigo-600/30 hover:bg-indigo-600 border border-indigo-500/50 rounded font-medium text-indigo-200 transition flex items-center gap-1">
-                  <i class="fa-regular fa-calendar-check"></i> 加到日曆
-                </a>
-              </div>
-            </div>
-
-            <!-- 列 4：一般 (白燈) -->
-            <div class="grid grid-cols-12 px-4 py-4 items-center hover:bg-slate-900/40 transition">
-              <div class="col-span-2 flex items-center justify-center gap-2">
-                <span class="w-2.5 h-2.5 rounded-full bg-slate-200 shadow"></span>
-                <span class="px-2 py-0.5 rounded bg-slate-700/60 text-slate-300 border border-slate-600 font-bold">一般</span>
-              </div>
-              <div class="col-span-2 flex justify-center">
-                <div class="bg-amber-400/10 border border-amber-400/30 text-amber-300 font-mono text-lg font-black px-3 py-1 rounded shadow tracking-widest">
-                  D-60
-                </div>
-              </div>
-              <div class="col-span-6 pr-4">
-                <div class="flex items-center gap-2 mb-1">
-                  <span class="font-semibold px-1.5 py-0.5 bg-slate-800 border border-slate-700 rounded text-slate-300">讀書會</span>
-                  <span class="font-bold text-slate-100 text-sm">【實體讀書會】教甄非選與綜合題盲測實作演練</span>
-                </div>
-                <p class="text-slate-400">每週二 18:30 在師培 A302 研討室，請攜帶近五年申論歷屆試題。</p>
-              </div>
-              <div class="col-span-2 flex justify-center">
-                <a href="https://calendar.google.com" target="_blank" class="px-2.5 py-1.5 bg-indigo-600/30 hover:bg-indigo-600 border border-indigo-500/50 rounded font-medium text-indigo-200 transition flex items-center gap-1">
-                  <i class="fa-regular fa-calendar-check"></i> 加到日曆
-                </a>
-              </div>
-            </div>
-
+            <div class="p-6 text-center text-slate-500 font-mono">載入最新公告中...</div>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- 模組 2：準教師會（成員名冊與個人學術足跡彙整） -->
+    <!-- 模組 2：準教師會 -->
     <section id="tab-members" class="tab-content space-y-4">
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        
-        <!-- 左側：成員名冊 -->
         <div class="lg:col-span-4 bg-slate-800 border border-slate-700 rounded-xl p-4 space-y-3">
           <h3 class="text-sm font-bold text-slate-200 flex items-center gap-2">
-            <i class="fa-solid fa-users text-indigo-400"></i> 讀書會成員名冊 (12)
+            <i class="fa-solid fa-users text-indigo-400"></i> 讀書會成員名冊
           </h3>
           <div class="space-y-2">
-            
-            <!-- 成員 1：陳培生 -->
-            <div id="user-card-peisheng" onclick="selectMember('peisheng')" class="p-3 rounded-lg bg-indigo-600/20 border-2 border-indigo-500 cursor-pointer transition">
+            <div onclick="selectMember('peisheng')" id="user-card-peisheng" class="p-3 rounded-lg bg-indigo-600/20 border-2 border-indigo-500 cursor-pointer transition">
               <div class="flex justify-between items-center mb-1">
                 <span class="text-sm font-bold text-slate-100">陳培生</span>
                 <span class="text-[10px] bg-slate-800 text-indigo-300 border border-slate-700 px-1.5 py-0.5 rounded">管理員</span>
               </div>
               <p class="text-xs text-slate-400">中等教育・教育科技/英文</p>
-              <div class="flex gap-4 mt-2 text-[10px] text-slate-400 pt-2 border-t border-slate-700/50">
-                <span>電子書: <b>8</b> 篇</span>
-                <span>出題: <b>24</b> 題</span>
-                <span>釋疑: <b>9</b> 則</span>
-              </div>
             </div>
-
-            <!-- 成員 2：林特教 -->
-            <div id="user-card-lin" onclick="selectMember('lin')" class="p-3 rounded-lg bg-slate-900/50 border border-slate-700 cursor-pointer hover:border-slate-500 transition">
+            <div onclick="selectMember('lin')" id="user-card-lin" class="p-3 rounded-lg bg-slate-900/50 border border-slate-700 cursor-pointer hover:border-slate-500 transition">
               <div class="flex justify-between items-center mb-1">
                 <span class="text-sm font-bold text-slate-200">林特教</span>
                 <span class="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-1.5 py-0.5 rounded">師培團隊</span>
               </div>
               <p class="text-xs text-slate-400">特殊教育・身心障礙類</p>
-              <div class="flex gap-4 mt-2 text-[10px] text-slate-400 pt-2 border-t border-slate-700/50">
-                <span>電子書: <b>11</b> 篇</span>
-                <span>出題: <b>18</b> 題</span>
-                <span>釋疑: <b>14</b> 則</span>
-              </div>
             </div>
-
-            <!-- 成員 3：黃國文 -->
-            <div id="user-card-huang" onclick="selectMember('huang')" class="p-3 rounded-lg bg-slate-900/50 border border-slate-700 cursor-pointer hover:border-slate-500 transition">
-              <div class="flex justify-between items-center mb-1">
-                <span class="text-sm font-bold text-slate-200">黃國文</span>
-                <span class="text-[10px] bg-slate-800 text-slate-400 border border-slate-700 px-1.5 py-0.5 rounded">正式成員</span>
-              </div>
-              <p class="text-xs text-slate-400">中等教育・國文學科</p>
-              <div class="flex gap-4 mt-2 text-[10px] text-slate-400 pt-2 border-t border-slate-700/50">
-                <span>電子書: <b>5</b> 篇</span>
-                <span>出題: <b>12</b> 題</span>
-                <span>釋疑: <b>4</b> 則</span>
-              </div>
-            </div>
-
           </div>
         </div>
-
-        <!-- 右側：個人學術足跡與成果彙整 -->
         <div class="lg:col-span-8 bg-slate-800 border border-slate-700 rounded-xl p-5 space-y-4">
-          <div class="flex items-center justify-between border-b border-slate-700 pb-3">
-            <div>
-              <h3 id="member-profile-name" class="text-base font-bold text-slate-100">陳培生 準教師 的個人學術足跡</h3>
-              <p class="text-xs text-slate-400">點選左側名冊即時動態彙整其文章、頭腦風暴試題與釋疑發言</p>
-            </div>
-            <span class="text-xs bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 px-3 py-1 rounded-full font-semibold">
-              教案核心貢獻者
-            </span>
+          <div class="border-b border-slate-700 pb-3">
+            <h3 id="member-profile-name" class="text-base font-bold text-slate-100">成員個人學術足跡</h3>
+            <p class="text-xs text-slate-400">點選左側名冊即時動態彙整其文章與命題紀錄</p>
           </div>
-
-          <!-- 足跡內容卡 -->
           <div id="member-footprints" class="space-y-3">
-            <div class="p-3.5 bg-slate-900 rounded-lg border border-slate-700">
-              <div class="flex justify-between items-center text-[10px] text-indigo-400 font-bold mb-1">
-                <span>【已撰寫電子書】教育心理學</span>
-                <span class="text-slate-500">2026-10-12 發布</span>
-              </div>
-              <h4 class="text-sm font-bold text-slate-200">巴夫洛夫經典條件制約架構解說 (含四階段圖解)</h4>
-              <p class="text-xs text-slate-400 mt-1">以非制約刺激與制約反應之四階段圖解分析，已關聯 AI 命題庫 (累積產生 14 題)。</p>
-            </div>
-
-            <div class="p-3.5 bg-slate-900 rounded-lg border border-slate-700">
-              <div class="flex justify-between items-center text-[10px] text-amber-400 font-bold mb-1">
-                <span>【頭腦風暴自由命題】情境問答題</span>
-                <span class="text-slate-500">2026-10-14 命題</span>
-              </div>
-              <h4 class="text-sm font-bold text-slate-200">正向行為支持 (PBS) 於課堂干擾行為之功能性評量應用</h4>
-              <p class="text-xs text-slate-400 mt-1">預設採分點規範與 15 行標準作答格式，目前共 14 位成員完成演練與釋疑。</p>
-            </div>
-
-            <div class="p-3.5 bg-slate-900 rounded-lg border border-slate-700">
-              <div class="flex justify-between items-center text-[10px] text-emerald-400 font-bold mb-1">
-                <span>【舉手釋疑紀錄】題目 #Q-1049</span>
-                <span class="text-slate-500">已結案 (答案已更新)</span>
-              </div>
-              <h4 class="text-sm font-bold text-slate-200">針對 114 年教資第 28 題之消退與負增強爭議提問</h4>
-              <p class="text-xs text-slate-400 mt-1">經管理員與師培團隊研討後，已更新試題詳解並加入考選部釋疑會議決議。</p>
+            <div class="p-3.5 bg-slate-900 rounded-lg border border-slate-700 text-xs text-slate-400">
+              請從左側點選成員以查看歷程足跡。
             </div>
           </div>
         </div>
-
       </div>
     </section>
 
-    <!-- 模組 3：電子書（主題式圖像解說） -->
+    <!-- 模組 3：電子書 -->
     <section id="tab-ebook" class="tab-content space-y-4">
       <div class="bg-slate-800 border border-slate-700 rounded-xl p-6 space-y-5">
         <div class="border-b border-slate-700 pb-4 flex flex-col sm:flex-row justify-between sm:items-center gap-3">
           <div>
             <div class="flex items-center gap-2 mb-1">
-              <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-indigo-500/20 text-indigo-300 border border-indigo-500/40">
-                教育心理學
-              </span>
+              <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-indigo-500/20 text-indigo-300 border border-indigo-500/40">教育心理學</span>
               <span class="text-xs text-slate-400">中等教育・教育理念與實務</span>
             </div>
-            <h2 class="text-xl font-bold text-slate-100">巴夫洛夫古典制約作用（Classical Conditioning）核心要素</h2>
+            <h2 class="text-xl font-bold text-slate-100">巴夫洛夫古典制約作用（Classical Conditioning）</h2>
           </div>
-          <!-- 跨模組直通按鈕 -->
           <button onclick="switchTab('exam'); showExamPaper();" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-lg shadow-md flex items-center gap-1.5 transition">
             <i class="fa-solid fa-play"></i> 針對此篇測驗 (AI出題)
           </button>
         </div>
-
-        <!-- 觀念摘要 -->
         <div class="text-xs leading-relaxed text-slate-300 space-y-2">
-          <p><b>【核心定義】</b> 中性刺激（NS）經多次與非制約刺激（UCS）配對伴隨出現後，轉化為制約刺激（CS），進而能單獨誘發制約反應（CR）。</p>
-          <p><b>【教資教甄常考點】</b> 消退（Extinction）並非遺忘，而是新的抑制作用；刺激類化與刺激辨別在學校恐懼症或情緒學習上的延伸應用。</p>
+          <p><b>【核心定義】</b> 中性刺激（NS）經多次與非制約刺激（UCS）配對伴隨出現後，轉化為制約刺激（CS），進而誘發制約反應（CR）。</p>
         </div>
-
-        <!-- 流程圖解區塊 -->
         <div class="bg-slate-950 p-5 rounded-lg border border-slate-800 text-center text-xs">
-          <div class="text-indigo-400 font-bold mb-4 flex items-center justify-center gap-1.5">
-            <i class="fa-solid fa-diagram-project"></i> 【制約學習歷程架構圖解】
-          </div>
           <div class="flex flex-wrap items-center justify-center gap-3 text-slate-200 font-mono">
             <span class="px-3.5 py-2 bg-slate-800 border border-slate-700 rounded shadow">中性刺激 (鈴聲)</span>
             <span class="text-base font-bold text-indigo-400">＋</span>
@@ -390,297 +194,48 @@
             <span class="px-3.5 py-2 bg-emerald-900/60 border border-emerald-500 rounded text-emerald-200 shadow">制約反應 (唾液分泌)</span>
           </div>
         </div>
-
-        <!-- 四大要素對照表格 -->
-        <div class="overflow-x-auto pt-2">
-          <table class="w-full text-left text-xs border border-slate-700 border-collapse">
-            <thead class="bg-slate-900/80 text-slate-300 font-semibold border-b border-slate-700">
-              <tr>
-                <th class="p-2.5 border-r border-slate-700">要素名稱</th>
-                <th class="p-2.5 border-r border-slate-700">實驗實例（巴夫洛夫犬）</th>
-                <th class="p-2.5">校園情境應用實例</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-700 text-slate-300 bg-slate-900/30">
-              <tr>
-                <td class="p-2.5 font-bold text-indigo-300 border-r border-slate-700">非制約刺激 (UCS)</td>
-                <td class="p-2.5 border-r border-slate-700">肉粉／食物</td>
-                <td class="p-2.5">教師當眾嚴厲斥責或懲處</td>
-              </tr>
-              <tr>
-                <td class="p-2.5 font-bold text-indigo-300 border-r border-slate-700">非制約反應 (UCR)</td>
-                <td class="p-2.5 border-r border-slate-700">分泌唾液</td>
-                <td class="p-2.5">學生感到焦慮、心跳加速、害怕</td>
-              </tr>
-              <tr>
-                <td class="p-2.5 font-bold text-indigo-300 border-r border-slate-700">制約刺激 (CS)</td>
-                <td class="p-2.5 border-r border-slate-700">鈴聲（配對後）</td>
-                <td class="p-2.5">特定上課鐘聲、數學課本封面</td>
-              </tr>
-              <tr>
-                <td class="p-2.5 font-bold text-indigo-300 border-r border-slate-700">制約反應 (CR)</td>
-                <td class="p-2.5 border-r border-slate-700">聞鈴聲即流唾液</td>
-                <td class="p-2.5">看見數學課本就引發胃痛或拒學</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
       </div>
     </section>
 
-    <!-- 模組 4：超會考（自動出題機 ＋ 仿教資試卷答案卷） -->
+    <!-- 模組 4：超會考 (題庫與作答) -->
     <section id="tab-exam" class="tab-content space-y-4">
-      
-      <!-- 視圖 A：自動出題機篩選器 -->
-      <div id="exam-filter" class="bg-slate-800 border border-slate-700 rounded-xl p-6 space-y-6">
-        <div class="border-b border-slate-700 pb-3 flex justify-between items-center">
-          <div>
-            <h3 class="text-base font-bold text-slate-100 flex items-center gap-2">
-              <i class="fa-solid fa-sliders text-indigo-400"></i> 自動出題機（階層式題庫篩選）
-            </h3>
-            <p class="text-xs text-slate-400">仿出版社命題操作架構・自由配置國家考科與師培文章章節標籤</p>
-          </div>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-xs">
-          <!-- 步驟 1 -->
-          <div class="bg-slate-900 p-4 rounded-lg border border-slate-700 space-y-2">
-            <h4 class="font-bold text-indigo-300">1. 選擇國家考科</h4>
-            <button class="w-full text-left p-2 rounded bg-indigo-600 text-white font-medium flex justify-between">
-              <span>教育理念與實務</span>
-              <i class="fa-solid fa-check text-xs"></i>
-            </button>
-            <button class="w-full text-left p-2 rounded bg-slate-800 text-slate-300 hover:bg-slate-700">學習者發展與適性輔導</button>
-            <button class="w-full text-left p-2 rounded bg-slate-800 text-slate-300 hover:bg-slate-700">課程教學與評量</button>
-          </div>
-
-          <!-- 步驟 2 -->
-          <div class="bg-slate-900 p-4 rounded-lg border border-slate-700 space-y-2">
-            <h4 class="font-bold text-indigo-300">2. 篩選電子書章節標籤</h4>
-            <label class="flex items-center space-x-2 cursor-pointer">
-              <input type="checkbox" checked class="rounded text-indigo-600">
-              <span class="text-slate-200">教育心理學 (古典制約/行為主義)</span>
-            </label>
-            <label class="flex items-center space-x-2 cursor-pointer">
-              <input type="checkbox" checked class="rounded text-indigo-600">
-              <span class="text-slate-200">正向行為支持 (PBS 三級介入)</span>
-            </label>
-            <label class="flex items-center space-x-2 cursor-pointer">
-              <input type="checkbox" class="rounded text-indigo-600">
-              <span class="text-slate-200">教育哲學 (皮特斯教育三大規準)</span>
-            </label>
-          </div>
-
-          <!-- 步驟 3 -->
-          <div class="bg-slate-900 p-4 rounded-lg border border-slate-700 space-y-2">
-            <h4 class="font-bold text-indigo-300">3. 題型配置與題數</h4>
-            <div class="flex justify-between items-center">
-              <span>單選題 (題數)</span>
-              <input type="number" value="5" class="w-14 bg-slate-800 border border-slate-600 rounded px-2 py-1 text-center font-bold">
-            </div>
-            <div class="flex justify-between items-center">
-              <span>非選問答題</span>
-              <input type="number" value="1" class="w-14 bg-slate-800 border border-slate-600 rounded px-2 py-1 text-center font-bold">
-            </div>
-            <div class="pt-2 border-t border-slate-700 space-y-1">
-              <label class="flex items-center space-x-2 cursor-pointer">
-                <input type="radio" name="source" checked class="text-indigo-600">
-                <span>從共享題庫挑選 (共 284 題)</span>
-              </label>
-              <label class="flex items-center space-x-2 cursor-pointer">
-                <input type="radio" name="source" class="text-indigo-600">
-                <span>由 AI 即時全新生成</span>
-              </label>
-            </div>
-          </div>
-        </div>
-
-        <div class="flex justify-end pt-3 border-t border-slate-700">
-          <button onclick="showExamPaper()" class="px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white font-bold text-xs rounded-lg shadow-lg flex items-center gap-2 transition">
-            <i class="fa-solid fa-play"></i> 開始測驗（載入教資仿真試卷）
-          </button>
-        </div>
+      <div id="exam-filter-view" class="bg-slate-800 border border-slate-700 rounded-xl p-6 space-y-4">
+        <h3 class="text-base font-bold text-slate-100 flex items-center gap-2">
+          <i class="fa-solid fa-sliders text-indigo-400"></i> 教檢與教甄線上組卷機
+        </h3>
+        <p class="text-xs text-slate-400">支援素養情境導向題型，仿真 15 行作答格線與即時釋疑流程。</p>
+        <button onclick="fetchExamQuestions()" class="px-5 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-lg transition flex items-center gap-2">
+          <i class="fa-solid fa-file-pen"></i> 從 Supabase 題庫載入試卷
+        </button>
       </div>
 
-      <!-- 視圖 B：模擬官方答案卷作答區 -->
-      <div id="exam-paper" class="hidden bg-slate-800 border border-slate-700 rounded-xl p-6 space-y-4">
-        <div class="flex justify-between items-center border-b border-slate-700 pb-3">
-          <div>
-            <span class="text-xs text-indigo-400 font-bold">116年 高級中等以下教師資格考試 模擬答案卷</span>
-            <h3 class="text-base font-bold text-slate-100">教育理念與實務 - 綜合題（情境非選）</h3>
-          </div>
-          <button onclick="showExamFilter()" class="text-xs text-slate-400 hover:text-slate-200 transition">
-            <i class="fa-solid fa-arrow-left mr-1"></i> 返回出題篩選器
+      <div id="exam-paper-view" class="hidden bg-slate-800 border border-slate-700 rounded-xl p-6 space-y-6">
+        <div class="flex items-center justify-between border-b border-slate-700 pb-3">
+          <h3 class="text-base font-bold text-slate-100">模擬試卷作答檢視</h3>
+          <button onclick="showExamFilter()" class="px-3 py-1.5 rounded bg-slate-700 hover:bg-slate-600 text-xs text-slate-300">
+            返回出題機
           </button>
         </div>
-
-        <!-- 情境題幹 -->
-        <div class="bg-slate-900/80 p-3.5 rounded-lg border border-slate-700 text-xs text-slate-300 leading-relaxed">
-          <b>【情境案例】</b> 某生於課堂常無故起立發出干擾聲響，經功能性行為評量確認係為尋求同儕與教師關注。請回答以下子題：<br/>
-          (一) 請依「正向行為支持 (PBS)」說明教師應如何進行前置事件介入？ (8分)<br/>
-          (二) 請列舉兩項親師合作之具體改善策略。 (7分)
-        </div>
-
-        <!-- 試卷格線與即時行數監控 -->
-        <div class="space-y-1">
-          <div class="flex justify-between text-[11px]">
-            <span class="text-slate-400">作答區域（限 15 行內完成，橫條底線模擬）</span>
-            <span id="line-counter" class="text-slate-400 font-bold">行數：3 / 15 行</span>
-          </div>
-          <div class="border border-slate-600 rounded-lg bg-slate-950 p-2 overflow-hidden shadow-inner">
-            <textarea id="paper-textarea" rows="8" oninput="updateLineCount()" class="w-full bg-transparent text-slate-100 text-xs exam-ruled-lines focus:outline-none resize-none font-mono">一、 (一) 依據正向行為支持理論，該生課堂行為主要功能為「尋求關注」；教師在進行前置事件干預時，應調整其座位至前排，並在表現專注行為時給予即時正向增強。
-(二) 具體親師合作做法：1. 建立聯絡簿每日行為檢核單；2. 訂定一致性正向行為契約。</textarea>
-          </div>
-        </div>
-
-        <!-- 底部互動按鈕 -->
-        <div class="flex justify-between items-center pt-2">
-          <button onclick="alert('🙋‍♂️ 已發起舉手釋疑！此題之爭議已寫入讀書會資料庫。')" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs rounded transition flex items-center gap-1.5">
-            <i class="fa-solid fa-hand"></i> 舉手釋疑此題
-          </button>
-          <button onclick="alert('交卷成功！Gemini AI 正依據教育部評分標準（採分點）進行即時批改...')" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-lg shadow flex items-center gap-1.5 transition">
-            <i class="fa-solid fa-paper-plane"></i> 交卷並由 AI 批改
-          </button>
+        <div id="exam-questions-list" class="space-y-6 text-sm">
+          <!-- 動態載入題目 -->
         </div>
       </div>
-
     </section>
 
   </main>
 
-  <!-- 互動控制 JavaScript (完整無截斷) -->
   <script>
-    // 頁籤切換邏輯
-  let currentActiveTab = 'tab-station'; // 預設車站布告欄
-    function switchTab(tabId) {
-      currentActiveTab = tabId;
-      // 1. 隱藏所有分頁
-      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-      
-      // 2. 顯示目標分頁
-      const target = document.getElementById('tab-' + tabId);
-      if (target) {
-        target.classList.add('active');
-      }
-
-      // 3. 更新按鈕樣式
-      ['bulletin', 'members', 'ebook', 'exam'].forEach(id => {
-        const btn = document.getElementById('nav-' + id);
-        if (btn) {
-          if (id === tabId) {
-            btn.className = "px-3 py-1.5 rounded-md bg-indigo-600 text-white transition";
-          } else {
-            btn.className = "px-3 py-1.5 rounded-md text-slate-400 hover:text-slate-200 transition";
-          }
-        }
-      });
-      checkPermissionOverlay();
-    }
-
-    // 超會考：切換篩選器與試卷
-    function showExamPaper() {
-      document.getElementById('exam-filter').classList.add('hidden');
-      document.getElementById('exam-paper').classList.remove('hidden');
-    }
-
-    function showExamFilter() {
-      document.getElementById('exam-paper').classList.add('hidden');
-      document.getElementById('exam-filter').classList.remove('hidden');
-    }
-
-    // 試卷行數監控與防溢出提示
-    function updateLineCount() {
-      const textarea = document.getElementById('paper-textarea');
-      if (!textarea) return;
-      const lines = textarea.value.split('\n').length;
-      const counter = document.getElementById('line-counter');
-      if (counter) {
-        counter.innerText = '行數：' + lines + ' / 15 行';
-        if (lines > 15) {
-          counter.className = 'text-red-400 font-bold';
-        } else {
-          counter.className = 'text-slate-400 font-bold';
-        }
-      }
-    }
-
-    // 準教師會：點擊名單切換右側學術足跡
-    function selectMember(memberKey) {
-      ['peisheng', 'lin', 'huang'].forEach(k => {
-        const card = document.getElementById('user-card-' + k);
-        if (card) {
-          if (k === memberKey) {
-            card.className = "p-3 rounded-lg bg-indigo-600/20 border-2 border-indigo-500 cursor-pointer transition";
-          } else {
-            card.className = "p-3 rounded-lg bg-slate-900/50 border border-slate-700 cursor-pointer hover:border-slate-500 transition";
-          }
-        }
-      });
-
-      const nameEl = document.getElementById('member-profile-name');
-      const footprintsEl = document.getElementById('member-footprints');
-
-      if (memberKey === 'peisheng') {
-        nameEl.innerText = "陳培生 準教師 的個人學術足跡";
-        footprintsEl.innerHTML = `
-          <div class="p-3.5 bg-slate-900 rounded-lg border border-slate-700">
-            <div class="flex justify-between items-center text-[10px] text-indigo-400 font-bold mb-1">
-              <span>【已撰寫電子書】教育心理學</span>
-              <span class="text-slate-500">2026-10-12 發布</span>
-            </div>
-            <h4 class="text-sm font-bold text-slate-200">巴夫洛夫經典條件制約架構解說 (含四階段圖解)</h4>
-            <p class="text-xs text-slate-400 mt-1">以非制約刺激與制約反應之四階段圖解分析，已關聯 AI 命題庫 (累積產生 14 題)。</p>
-          </div>
-          <div class="p-3.5 bg-slate-900 rounded-lg border border-slate-700">
-            <div class="flex justify-between items-center text-[10px] text-amber-400 font-bold mb-1">
-              <span>【頭腦風暴自由命題】情境問答題</span>
-              <span class="text-slate-500">2026-10-14 命題</span>
-            </div>
-            <h4 class="text-sm font-bold text-slate-200">正向行為支持 (PBS) 於課堂干擾行為之功能性評量應用</h4>
-            <p class="text-xs text-slate-400 mt-1">預設採分點規範與 15 行標準作答格式，目前共 14 位成員完成演練與釋疑。</p>
-          </div>
-        `;
-      } else if (memberKey === 'lin') {
-        nameEl.innerText = "林特教 準教師 的個人學術足跡";
-        footprintsEl.innerHTML = `
-          <div class="p-3.5 bg-slate-900 rounded-lg border border-slate-700">
-            <div class="flex justify-between items-center text-[10px] text-indigo-400 font-bold mb-1">
-              <span>【已撰寫電子書】特殊教育學生評量</span>
-              <span class="text-slate-500">2026-09-30 發布</span>
-            </div>
-            <h4 class="text-sm font-bold text-slate-200">個別化教育計畫 (IEP) 法定內容與轉銜會議流程心智圖</h4>
-            <p class="text-xs text-slate-400 mt-1">含特教法規規範檢核表，已由師培團隊標註為精選教案。</p>
-          </div>
-          <div class="p-3.5 bg-slate-900 rounded-lg border border-slate-700">
-            <div class="flex justify-between items-center text-[10px] text-emerald-400 font-bold mb-1">
-              <span>【舉手釋疑紀錄】題目 #Q-0982</span>
-              <span class="text-slate-500">已結案</span>
-            </div>
-            <h4 class="text-sm font-bold text-slate-200">身心障礙學生特殊需求領域課程綱要之十二年國教銜接疑義</h4>
-            <p class="text-xs text-slate-400 mt-1">針對生活管理與職業教育之學分認列標準進行論證。</p>
-          </div>
-        `;
-      } else {
-        nameEl.innerText = "黃國文 準教師 的個人學術足跡";
-        footprintsEl.innerHTML = `
-          <div class="p-3.5 bg-slate-900 rounded-lg border border-slate-700">
-            <div class="flex justify-between items-center text-[10px] text-indigo-400 font-bold mb-1">
-              <span>【已撰寫電子書】課程發展與設計</span>
-              <span class="text-slate-500">2026-10-05 發布</span>
-            </div>
-            <h4 class="text-sm font-bold text-slate-200">泰勒法則 (Tyler Rationale) 四大基本問題與逆向設計 (UbD) 比較</h4>
-            <p class="text-xs text-slate-400 mt-1">教甄教案設計常考題型重點整理。</p>
-          </div>
-        `;
-      }
-    }
-
-        // 1. 初始化 Supabase 客戶端
+    // ==========================================
+    // 1. Supabase 初始化配置
+    // ==========================================
     const SUPABASE_URL = 'https://evykaepyjsnzjestaykc.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2eWthZXB5anNuemplc3RheWtjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIyOTQ4MTEsImV4cCI6MjEwNzg3MDgxMX0.GzUKmJMYR_mMexkbb5iHFddNhtSY_qiJATFC7d0PpOA'; // 貼上剛才複製的 anon public key
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2eWthZXB5anNuemplc3RheWtjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE1NTEzNDgsImV4cCI6MjA3NzEyNzM0OH0.Xb-gA14fUa3_w01j_V_1rA2h1hE0c66j1R1f-yCqP-4'; // 您提供的 anon 金鑰
     const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    
-    // 2. 發起 Google OAuth 登入
+
+    let currentUserProfile = null;
+    let currentActiveTab = 'bulletin';
+
+    // Google 登入
     async function loginWithGoogle() {
       const { error } = await supabaseClient.auth.signInWithOAuth({
         provider: 'google',
@@ -692,207 +247,32 @@
         alert('登入發起失敗：' + error.message);
       }
     }
-    
-    // 3. 登出
+
+    // 登出
     async function logout() {
       await supabaseClient.auth.signOut();
-      currentUserProfile = null; // 清空當前資料
-      // 登出後直接跳回預設首頁（布告欄），避免停留在受保護頁面未刷新
+      currentUserProfile = null;
       window.location.href = window.location.origin;
     }
-    
-    // 4. 監聽登入狀態並更新畫面
-    async function initAuthListener() {
-      const { data: { session } } = await supabaseClient.auth.getSession();
-      renderAuthUI(session);
-    
-      // 監聽登入/登出事件變更
-      supabaseClient.auth.onAuthStateChange((_event, session) => {
-        renderAuthUI(session);
-      });
-    }
-    
-let currentUserProfile = null; // 存放當前登入者資料與權限
 
-async function renderAuthUI(session) {
-  const btnLogin = document.getElementById('btn-login');
-  const userInfo = document.getElementById('user-info');
-  const userAvatar = document.getElementById('user-avatar');
-  const userName = document.getElementById('user-name');
-  const userBadge = document.getElementById('user-badge');
-
-  if (session && session.user) {
-    if (btnLogin) btnLogin.classList.add('hidden');
-    if (userInfo) userInfo.classList.remove('hidden');
-
-    const meta = session.user.user_metadata || {};
-    if (userName) userName.innerText = meta.full_name || meta.name || session.user.email.split('@')[0];
-    if (userAvatar) userAvatar.src = meta.avatar_url || 'https://via.placeholder.com/32';
-
-    try {
-      // 使用 maybeSingle() 避免查無資料時程式拋錯中斷
-      const { data: profile, error } = await supabaseClient
-        .from('profiles')
-        .select('*')
-        .eq('id', session.user.id)
-        .maybeSingle();
-
-      if (error) {
-        console.warn('讀取個人權限失敗：', error.message);
-      }
-
-      currentUserProfile = profile;
-
-      if (profile && userBadge) {
-        if (profile.role === 'pending_approval') {
-          userBadge.innerText = '身分審核中';
-          userBadge.className = 'text-[10px] text-amber-400 font-bold';
-        } else if (profile.role === 'admin') {
-          userBadge.innerText = '系統管理員';
-          userBadge.className = 'text-[10px] text-indigo-300 font-bold';
-        } else {
-          userBadge.innerText = '正式成員';
-          userBadge.className = 'text-[10px] text-emerald-400 font-bold';
-        }
-      }
-    } catch (err) {
-      console.error('查詢 profile 發生未預期錯誤：', err);
-    }
-  } else {
-    // 未登入時確實清空全域變數與重設按鈕狀態
-    currentUserProfile = null;
-    if (btnLogin) btnLogin.classList.remove('hidden');
-    if (userInfo) userInfo.classList.add('hidden');
-  }
-
-  // 確保無論登入成功、未登入或查詢失敗，都會百分之百執行遮罩檢查
-  if (typeof checkPermissionOverlay === 'function') {
-    checkPermissionOverlay();
-  }
-}
-
-    // 動態讀取 Supabase 公告並渲染車站翻牌看板
-    async function fetchNotices() {
-      const container = document.getElementById('notice-list-container');
-      if (!container) return;
-    
-      const { data: notices, error } = await supabaseClient
-        .from('notices')
-        .select('*')
-        .order('created_at', { ascending: false });
-    
-      if (error) {
-        container.innerHTML = `<div class="p-4 text-center text-red-400 font-mono">公告載入失敗：${error.message}</div>`;
-        return;
-      }
-    
-      if (!notices || notices.length === 0) {
-        container.innerHTML = `<div class="p-4 text-center text-slate-500 font-mono">目前尚無公告</div>`;
-        return;
-      }
-    
-      // 渲染動態資料
-      container.innerHTML = notices.map(item => {
-        // 依據 priority 設定燈號樣式
-        let lightHtml = '';
-        if (item.priority === 'urgent') {
-          lightHtml = `
-            <span class="w-2.5 h-2.5 rounded-full bg-red-500 shadow-lg animate-ping"></span>
-            <span class="px-2 py-0.5 rounded bg-red-500/20 text-red-400 border border-red-500/40 font-bold">緊急</span>
-          `;
-        } else if (item.priority === 'important') {
-          lightHtml = `
-            <span class="w-2.5 h-2.5 rounded-full bg-sky-400 shadow-lg"></span>
-            <span class="px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-500/40 font-bold">重要</span>
-          `;
-        } else {
-          lightHtml = `
-            <span class="w-2.5 h-2.5 rounded-full bg-slate-200 shadow"></span>
-            <span class="px-2 py-0.5 rounded bg-slate-700/60 text-slate-300 border border-slate-600 font-bold">一般</span>
-          `;
-        }
-    
-        return `
-          <div class="grid grid-cols-12 px-4 py-4 items-center hover:bg-slate-900/40 transition">
-            <div class="col-span-2 flex items-center justify-center gap-2">
-              ${lightHtml}
-            </div>
-            <div class="col-span-2 flex justify-center">
-              <div class="bg-amber-400/10 border border-amber-400/30 text-amber-300 font-mono text-lg font-black px-3 py-1 rounded shadow tracking-widest">
-                ${item.days_label || 'D-Day'}
-              </div>
-            </div>
-            <div class="col-span-6 pr-4">
-              <div class="flex items-center gap-2 mb-1">
-                <span class="font-semibold px-1.5 py-0.5 bg-slate-800 border border-slate-700 rounded text-slate-300 text-[11px]">${item.target_exam || '通用'}</span>
-                <span class="font-bold text-slate-100 text-sm">${item.title}</span>
-              </div>
-              <p class="text-slate-400">${item.content}</p>
-            </div>
-            <div class="col-span-2 flex justify-center">
-              <a href="https://calendar.google.com" target="_blank" class="px-2.5 py-1.5 bg-indigo-600/30 hover:bg-indigo-600 border border-indigo-500/50 rounded font-medium text-indigo-200 transition flex items-center gap-1">
-                <i class="fa-regular fa-calendar-check"></i> 加到日曆
-              </a>
-            </div>
-          </div>
-        `;
-      }).join('');
-    }
-    
-    // 在網頁載入時一併執行公告讀取
-    window.addEventListener('DOMContentLoaded', () => {
-      initAuthListener();
-      fetchNotices(); // 讀取資料庫公告
-    });
-
-    // 動態撈取題庫資料
-    async function fetchExamQuestions() {
-      // 檢查權限
-      if (!currentUserProfile || currentUserProfile.role === 'pending_approval') {
-        alert('【權限受限】您的帳號目前處於「身分審核中」，請待管理員開通為正式成員後方可使用超會考題庫。');
-        return;
-      }
-    
-      const { data: questions, error } = await supabaseClient
-        .from('questions')
-        .select('*')
-        .order('created_at', { ascending: false });
-    
-      if (error) {
-        alert('讀取題庫失敗：' + error.message);
-        return;
-      }
-    
-      console.log('成功讀取真實試題：', questions);
-      // 切換到試卷檢視畫面並顯示題目
-      showExamPaper();
-    }
-
-    // 確保目前選中的頁籤變數有宣告
-    let currentActiveTab = 'tab-station';
-    // 檢查目前頁面是否需要顯示權限鎖定遮罩
+    // 權限遮罩檢查
     function checkPermissionOverlay() {
       const overlay = document.getElementById('pending-lock-overlay');
+      const titleEl = document.getElementById('overlay-title');
+      const descEl = document.getElementById('overlay-desc');
       if (!overlay) return;
-    
-      // 定義受保護的頁籤
-      const protectedTabs = ['tab-exam', 'tab-ebook', 'tab-community']; 
+
+      const protectedTabs = ['members', 'ebook', 'exam'];
       const isProtectedTab = protectedTabs.includes(currentActiveTab);
-    
-      // 判斷未登入或待審核身分
-      const isPendingOrGuest = !currentUserProfile || currentUserProfile.role === 'pending_approval' || currentUserProfile.role === 'guest';
-    
-      if (isProtectedTab && isPendingOrGuest) {
+
+      const isGuest = !currentUserProfile;
+      const isPending = currentUserProfile && currentUserProfile.role === 'pending_approval';
+
+      if (isProtectedTab && (isGuest || isPending)) {
         overlay.classList.remove('hidden');
-      } else {
-        overlay.classList.add('hidden');
-      }
-    }
-    
-    // 頁面載入時啟動
-    window.addEventListener('DOMContentLoaded', () => {
-      initAuthListener();
-    });
-  </script>
-</body>
-</html>
+        if (isGuest) {
+          if (titleEl) titleEl.innerText = '請先登入系統';
+          if (descEl) descEl.innerHTML = '核心題庫與電子書筆記僅對讀書會成員開放。<br>請點選右上角「Google 登入」以存取完整學習資源。';
+        } else {
+          if (titleEl) titleEl.innerText = '身分資格審核中';
+          if (descEl) descEl.innerHTML = '歡迎加入準教師戰鬥營！您目前的身分為 <span class="text-amber-400 font-semibold font-mono
