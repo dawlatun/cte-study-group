@@ -23,6 +23,51 @@
       line-height: 32px;
     }
   </style>
+
+  <!-- 全域核心分頁控制（置於 head 確保 DOM 渲染前即就緒，點擊永不報錯） -->
+  <script>
+    window.currentActiveTab = 'bulletin';
+    window.currentUserProfile = null;
+
+    window.switchTab = function(tabName) {
+      window.currentActiveTab = tabName;
+
+      // 隱藏所有分頁內容
+      document.querySelectorAll('.tab-content').forEach(function(el) {
+        el.classList.remove('active');
+      });
+      
+      // 顯示目標分頁內容
+      var target = document.getElementById('tab-' + tabName);
+      if (target) {
+        target.classList.add('active');
+      }
+
+      // 更新頂部按鈕高亮狀態
+      var tabs = ['bulletin', 'members', 'ebook', 'exam'];
+      tabs.forEach(function(t) {
+        var btn = document.getElementById('nav-' + t);
+        if (btn) {
+          if (t === tabName) {
+            btn.className = 'px-3 py-1.5 rounded-md bg-indigo-600 text-white transition';
+          } else {
+            btn.className = 'px-3 py-1.5 rounded-md text-slate-400 hover:text-slate-200 transition';
+          }
+        }
+      });
+
+      // 觸發對應分頁的更新函式
+      if (typeof window.checkPermissionOverlay === 'function') {
+        window.checkPermissionOverlay();
+      }
+      if (tabName === 'ebook' && typeof window.fetchArticles === 'function') {
+        window.fetchArticles();
+      }
+      if (tabName === 'members' && typeof window.fetchMembers === 'function') {
+        window.fetchMembers();
+      }
+    };
+  </script>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen font-sans flex flex-col">
 
@@ -64,13 +109,19 @@
       </button>
 
       <div id="user-info" class="hidden flex items-center space-x-3">
-        <img id="user-avatar" src="" alt="avatar" class="w-7 h-7 rounded-full border border-indigo-400">
+        <img id="user-avatar" src="" alt="avatar" class="w-8 h-8 rounded-full border border-indigo-400 object-cover">
         <div class="text-left hidden sm:block">
-          <div id="user-name" onclick="changeCustomName()" title="點擊自訂讀書會稱呼" class="font-bold text-slate-200 leading-tight cursor-pointer hover:text-indigo-300 transition flex items-center gap-1">
-            <span>--</span>
-            <i class="fa-solid fa-pen text-[10px] opacity-60"></i>
+          <div class="flex items-center gap-1.5">
+            <div id="user-name" onclick="editUserProfile()" title="點擊自訂稱呼與所屬單位" class="font-bold text-slate-200 leading-tight cursor-pointer hover:text-indigo-300 transition flex items-center gap-1">
+              <span>--</span>
+              <i class="fa-solid fa-pen text-[10px] opacity-60"></i>
+            </div>
+            <div id="user-badge" class="text-[10px] text-amber-400 font-bold">待審核</div>
           </div>
-          <div id="user-badge" class="text-[10px] text-amber-400 font-bold">待審核</div>
+          <div id="user-dept" onclick="editUserProfile()" title="點擊編輯所屬單位／系級" class="text-[10px] text-slate-400 hover:text-indigo-300 cursor-pointer transition flex items-center gap-1 mt-0.5">
+            <i class="fa-solid fa-school text-[9px] text-slate-500"></i>
+            <span>--</span>
+          </div>
         </div>
         <button onclick="logout()" class="px-2 py-1 rounded bg-slate-700 hover:bg-slate-600 text-slate-300 text-[11px] transition">
           登出
@@ -132,7 +183,7 @@
       </div>
     </section>
 
-    <!-- 模組 2：準教師會 (動態載入成員名冊) -->
+    <!-- 模組 2：準教師會 (動態載入成員名冊與所屬單位/系級) -->
     <section id="tab-members" class="tab-content space-y-4">
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
         <div class="lg:col-span-4 bg-slate-800 border border-slate-700 rounded-xl p-4 space-y-3">
@@ -152,7 +203,7 @@
         <div class="lg:col-span-8 bg-slate-800 border border-slate-700 rounded-xl p-5 space-y-4">
           <div class="border-b border-slate-700 pb-3">
             <h3 id="member-profile-name" class="text-base font-bold text-slate-100">成員個人學術足跡</h3>
-            <p class="text-xs text-slate-400">點選左側名冊即時動態彙整其文章與命題紀錄</p>
+            <p id="member-profile-dept" class="text-xs text-indigo-300 mt-0.5">點選左側名冊即時動態彙整其文章與命題紀錄</p>
           </div>
           <div id="member-footprints" class="space-y-3">
             <div class="p-3.5 bg-slate-900 rounded-lg border border-slate-700 text-xs text-slate-400">
@@ -274,60 +325,29 @@
 
   <script>
     // ==========================================
-    // 1. 最優先宣告：分頁切換與全域狀態（確保點擊永不失效）
-    // ==========================================
-    let currentActiveTab = 'bulletin';
-    let currentUserProfile = null;
-
-    function switchTab(tabName) {
-      currentActiveTab = tabName;
-
-      // 隱藏所有分頁內容
-      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-      
-      // 顯示目標分頁內容
-      const target = document.getElementById(`tab-${tabName}`);
-      if (target) {
-        target.classList.add('active');
-      }
-
-      // 更新頂部按鈕高亮狀態
-      const tabs = ['bulletin', 'members', 'ebook', 'exam'];
-      tabs.forEach(t => {
-        const btn = document.getElementById(`nav-${t}`);
-        if (btn) {
-          if (t === tabName) {
-            btn.className = 'px-3 py-1.5 rounded-md bg-indigo-600 text-white transition';
-          } else {
-            btn.className = 'px-3 py-1.5 rounded-md text-slate-400 hover:text-slate-200 transition';
-          }
-        }
-      });
-
-      // 切換時若切到電子書或名冊，主動刷新資料
-      if (tabName === 'ebook' && typeof fetchArticles === 'function') {
-        fetchArticles();
-      }
-      if (tabName === 'members' && typeof fetchMembers === 'function') {
-        fetchMembers();
-      }
-
-      // 檢查是否需覆蓋毛玻璃權限遮罩
-      if (typeof checkPermissionOverlay === 'function') {
-        checkPermissionOverlay();
-      }
-    }
-
-    // ==========================================
-    // 2. Supabase 初始化配置
+    // 1. Supabase 初始化配置 (加上防呆與錯誤攔截)
     // ==========================================
     const SUPABASE_URL = 'https://evykaepyjsnzjestaykc.supabase.co';
-    // 務必放入您在 Supabase Project Settings ➜ API 複製的真實 anon 金鑰（單行、無換行）
+    // 務必放入您在 Supabase Project Settings ➜ API 複製的真實 anon 金鑰（純英數字、單行、無換行）
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2eWthZXB5anNuemplc3RheWtjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIyOTQ4MTEsImV4cCI6MjEwNzg3MDgxMX0.GzUKmJMYR_mMexkbb5iHFddNhtSY_qiJATFC7d0PpOA';
-    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    let supabaseClient = null;
+    try {
+      if (window.supabase && SUPABASE_ANON_KEY && !SUPABASE_ANON_KEY.includes('請替換')) {
+        supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      } else {
+        console.warn('Supabase 未初始化：請填入正確的 SUPABASE_ANON_KEY');
+      }
+    } catch (e) {
+      console.error('Supabase 初始化發生例外：', e);
+    }
 
     // Google OAuth 登入
-    async function loginWithGoogle() {
+    window.loginWithGoogle = async function() {
+      if (!supabaseClient) {
+        alert('請先在 index.html 填入正確的 Supabase anon 金鑰！');
+        return;
+      }
       const { error } = await supabaseClient.auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -337,60 +357,96 @@
       if (error) {
         alert('登入發起失敗：' + error.message);
       }
-    }
+    };
 
     // 登出
-    async function logout() {
-      await supabaseClient.auth.signOut();
-      currentUserProfile = null;
+    window.logout = async function() {
+      if (supabaseClient) {
+        await supabaseClient.auth.signOut();
+      }
+      window.currentUserProfile = null;
       window.location.href = window.location.origin;
-    }
+    };
 
-    // 點擊自訂讀書會稱呼（不影響 Google 帳號設定）
-    async function changeCustomName() {
+    // 點擊自訂個人稱呼與所屬單位/系級（連動更新 profiles 與所有電子書作者姓名）
+    window.editUserProfile = async function() {
+      if (!supabaseClient) return;
       const { data: { session } } = await supabaseClient.auth.getSession();
       if (!session) {
-        alert('請先登入後再修改暱稱！');
+        alert('請先登入後再修改個人稱呼與系級！');
         return;
       }
 
       const nameContainer = document.getElementById('user-name');
-      const currentName = nameContainer ? nameContainer.querySelector('span').innerText : '';
+      const textSpan = nameContainer ? nameContainer.querySelector('span') : null;
+      const currentName = textSpan ? textSpan.innerText : '';
+      const currentDept = (window.currentUserProfile && window.currentUserProfile.department) ? window.currentUserProfile.department : '';
+
       const newName = prompt('請輸入您在讀書會戰鬥營中要顯示的自訂稱呼：', currentName);
+      if (newName === null) return; // 使用者按取消
 
-      if (newName && newName.trim() !== '' && newName.trim() !== currentName) {
-        const { error } = await supabaseClient
-          .from('profiles')
-          .update({ custom_name: newName.trim() })
-          .eq('id', session.user.id);
+      const newDept = prompt('請輸入您的「所屬單位／系級」（例如：高師大 工藝教育系、彰師大 特教所）：', currentDept);
+      if (newDept === null) return; // 使用者按取消
 
-        if (error) {
-          alert('更新稱呼失敗：' + error.message);
-        } else {
-          if (nameContainer) {
-            nameContainer.querySelector('span').innerText = newName.trim();
-          }
-          if (currentUserProfile) {
-            currentUserProfile.custom_name = newName.trim();
-          }
-          alert('稱呼已成功更新！');
-          fetchMembers(); // 即時更新名冊卡片
-        }
+      const updatedName = newName.trim() || currentName;
+      const updatedDept = newDept.trim();
+
+      // 1. 同步更新 profiles 資料表
+      const { error: profileError } = await supabaseClient
+        .from('profiles')
+        .update({
+          custom_name: updatedName,
+          department: updatedDept
+        })
+        .eq('id', session.user.id);
+
+      if (profileError) {
+        alert('更新個人資料失敗：' + profileError.message);
+        return;
       }
-    }
+
+      // 2. 同步將該成員先前所有電子書文章的作者名稱全部更新
+      try {
+        await supabaseClient
+          .from('articles')
+          .update({ author_name: updatedName })
+          .eq('author_id', session.user.id);
+      } catch (err) {
+        console.warn('同步更新電子書文章作者名稱略過：', err);
+      }
+
+      // 3. 更新介面顯示與全域快取
+      if (textSpan) {
+        textSpan.innerText = updatedName;
+      }
+      const deptEl = document.getElementById('user-dept');
+      if (deptEl) {
+        const deptSpan = deptEl.querySelector('span');
+        if (deptSpan) deptSpan.innerText = updatedDept || '未設定系級';
+      }
+
+      if (window.currentUserProfile) {
+        window.currentUserProfile.custom_name = updatedName;
+        window.currentUserProfile.department = updatedDept;
+      }
+
+      alert('個人資料已成功更新！電子書與成員名冊已即時連動。');
+      window.fetchMembers();  // 即時更新成員名冊
+      window.fetchArticles(); // 即時刷新電子書文章列表
+    };
 
     // 檢查受保護頁籤的權限遮罩
-    function checkPermissionOverlay() {
+    window.checkPermissionOverlay = function() {
       const overlay = document.getElementById('pending-lock-overlay');
       const titleEl = document.getElementById('overlay-title');
       const descEl = document.getElementById('overlay-desc');
       if (!overlay) return;
 
       const protectedTabs = ['members', 'ebook', 'exam'];
-      const isProtectedTab = protectedTabs.includes(currentActiveTab);
+      const isProtectedTab = protectedTabs.includes(window.currentActiveTab);
 
-      const isGuest = !currentUserProfile;
-      const isPending = currentUserProfile && currentUserProfile.role === 'pending_approval';
+      const isGuest = !window.currentUserProfile;
+      const isPending = window.currentUserProfile && window.currentUserProfile.role === 'pending_approval';
 
       if (isProtectedTab && (isGuest || isPending)) {
         overlay.classList.remove('hidden');
@@ -404,21 +460,22 @@
       } else {
         overlay.classList.add('hidden');
       }
-    }
+    };
 
-    // 渲染右上角身分狀態、頭像與自訂稱謂
+    // 渲染右上角身分狀態、頭像、自訂稱謂與系級
     async function renderAuthUI(session) {
       const btnLogin = document.getElementById('btn-login');
       const userInfo = document.getElementById('user-info');
       const userAvatar = document.getElementById('user-avatar');
       const userName = document.getElementById('user-name');
+      const userDept = document.getElementById('user-dept');
       const userBadge = document.getElementById('user-badge');
 
-      if (session && session.user) {
+      if (session && session.user && supabaseClient) {
         if (btnLogin) btnLogin.classList.add('hidden');
         if (userInfo) userInfo.classList.remove('hidden');
 
-        // 先從 profiles 查詢是否有自訂 custom_name 與角色
+        // 先從 profiles 查詢是否有自訂 custom_name, department 與角色
         let profile = null;
         try {
           const { data } = await supabaseClient
@@ -428,7 +485,7 @@
             .maybeSingle();
 
           profile = data;
-          currentUserProfile = profile;
+          window.currentUserProfile = profile;
         } catch (e) {
           console.error('查詢 profile 失敗：', e);
         }
@@ -438,8 +495,22 @@
 
         // 優先顯示 profiles.custom_name，若無才 fallback 到 Google 姓名
         if (userName) {
+          const textSpan = userName.querySelector('span');
           const displayName = (profile && profile.custom_name) ? profile.custom_name : googleName;
-          userName.querySelector('span').innerText = displayName;
+          if (textSpan) {
+            textSpan.innerText = displayName;
+          } else {
+            userName.innerText = displayName;
+          }
+        }
+
+        // 顯示系級／所屬單位
+        if (userDept) {
+          const deptSpan = userDept.querySelector('span');
+          const displayDept = (profile && profile.department) ? profile.department : '點擊設定系級';
+          if (deptSpan) {
+            deptSpan.innerText = displayDept;
+          }
         }
 
         if (userAvatar) {
@@ -459,18 +530,23 @@
           }
         }
       } else {
-        currentUserProfile = null;
+        window.currentUserProfile = null;
         if (btnLogin) btnLogin.classList.remove('hidden');
         if (userInfo) userInfo.classList.add('hidden');
       }
 
-      checkPermissionOverlay();
+      window.checkPermissionOverlay();
     }
 
     // 動態載入車站布告欄（重要公告：淺綠色燈號與字體）
-    async function fetchNotices() {
+    window.fetchNotices = async function() {
       const container = document.getElementById('notice-list-container');
       if (!container) return;
+
+      if (!supabaseClient) {
+        container.innerHTML = `<div class="p-6 text-center text-amber-400 font-mono text-xs">請先在程式碼填妥正確的 Supabase anon 金鑰。</div>`;
+        return;
+      }
 
       const { data: notices, error } = await supabaseClient
         .from('notices')
@@ -478,12 +554,12 @@
         .order('created_at', { ascending: false });
 
       if (error) {
-        container.innerHTML = `<div class="p-6 text-center text-red-400 font-mono">公告載入失敗：${error.message}</div>`;
+        container.innerHTML = `<div class="p-6 text-center text-red-400 font-mono text-xs">公告載入失敗：${error.message}</div>`;
         return;
       }
 
       if (!notices || notices.length === 0) {
-        container.innerHTML = `<div class="p-6 text-center text-slate-500 font-mono">目前尚無公告</div>`;
+        container.innerHTML = `<div class="p-6 text-center text-slate-500 font-mono text-xs">目前尚無公告</div>`;
         return;
       }
 
@@ -495,7 +571,6 @@
             <span class="px-2 py-0.5 rounded bg-red-500/20 text-red-400 border border-red-500/40 font-bold">緊急</span>
           `;
         } else if (item.priority === 'important') {
-          // 淺綠色燈號與字體配置
           lightHtml = `
             <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-lg shadow-emerald-500/20"></span>
             <span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold">重要</span>
@@ -530,18 +605,23 @@
           </div>
         `;
       }).join('');
-    }
+    };
 
     // ==========================================
-    // 3. 讀書會成員名冊與個人學術足跡動態載入
+    // 2. 讀書會成員名冊與個人學術足跡動態載入
     // ==========================================
     let cachedMembers = [];
     let selectedMemberId = null;
 
-    async function fetchMembers() {
+    window.fetchMembers = async function() {
       const container = document.getElementById('members-list-container');
       const countBadge = document.getElementById('member-count-badge');
       if (!container) return;
+
+      if (!supabaseClient) {
+        container.innerHTML = `<div class="p-4 text-center text-amber-400 font-mono text-xs">請先在程式碼填妥正確的 Supabase anon 金鑰。</div>`;
+        return;
+      }
 
       const { data: members, error } = await supabaseClient
         .from('profiles')
@@ -563,6 +643,7 @@
 
       container.innerHTML = members.map((m) => {
         const displayName = m.custom_name || m.full_name || m.email?.split('@')[0] || '讀書會成員';
+        const displayDept = m.department || m.domain || m.specialty || '中等/特殊教育學程培訓中';
         
         let roleBadge = '';
         if (m.role === 'admin') {
@@ -586,23 +667,25 @@
               </span>
               ${roleBadge}
             </div>
-            <p class="text-xs text-slate-400 truncate">${m.domain || m.specialty || '中等/特殊教育學程培訓中'}</p>
+            <p class="text-xs text-slate-400 truncate flex items-center gap-1">
+              <i class="fa-solid fa-school text-[9px] text-slate-500"></i> ${displayDept}
+            </p>
           </div>
         `;
       }).join('');
 
-      // 預設高亮選取第一位成員
+      // 預設選取第一位成員
       if (!selectedMemberId && members.length > 0) {
-        selectMemberById(members[0].id);
+        window.selectMemberById(members[0].id);
       }
-    }
+    };
 
-    async function selectMemberById(memberId) {
+    window.selectMemberById = async function(memberId) {
       selectedMemberId = memberId;
       const member = cachedMembers.find(m => m.id === memberId);
       if (!member) return;
 
-      // 更新名冊中卡片的高亮邊框
+      // 更新卡片外框反白高亮
       cachedMembers.forEach(m => {
         const card = document.getElementById(`member-card-${m.id}`);
         if (card) {
@@ -615,17 +698,23 @@
       });
 
       const nameEl = document.getElementById('member-profile-name');
+      const deptEl = document.getElementById('member-profile-dept');
       const listEl = document.getElementById('member-footprints');
       const displayName = member.custom_name || member.full_name || member.email?.split('@')[0] || '讀書會成員';
+      const displayDept = member.department || '未設定系級';
 
       if (nameEl) {
         nameEl.innerText = `${displayName} 的個人學術足跡`;
+      }
+      if (deptEl) {
+        deptEl.innerHTML = `<i class="fa-solid fa-school mr-1"></i> 所屬系級：${displayDept}`;
       }
 
       if (listEl) {
         listEl.innerHTML = `<div class="p-4 text-center text-slate-500 font-mono text-xs">載入學術足跡與發表文章中...</div>`;
 
-        // 查詢該成員在 articles 資料表發布的文章
+        if (!supabaseClient) return;
+
         const { data: userArticles } = await supabaseClient
           .from('articles')
           .select('*')
@@ -651,24 +740,28 @@
           `;
         }
       }
-    }
+    };
 
     // ==========================================
-    // 4. 電子書發布與動態讀取
+    // 3. 電子書發布與動態讀取 (支援作者名稱與系級即時連動)
     // ==========================================
-    function openPublishModal() {
-      if (!currentUserProfile || currentUserProfile.role === 'pending_approval') {
+    window.openPublishModal = function() {
+      if (!window.currentUserProfile || window.currentUserProfile.role === 'pending_approval') {
         alert('【權限受限】僅正式成員與管理員具備發布電子書筆記權限。');
         return;
       }
       document.getElementById('publish-modal').classList.remove('hidden');
-    }
+    };
 
-    function closePublishModal() {
+    window.closePublishModal = function() {
       document.getElementById('publish-modal').classList.add('hidden');
-    }
+    };
 
-    async function submitArticle() {
+    window.submitArticle = async function() {
+      if (!supabaseClient) {
+        alert('Supabase 尚未初始化！');
+        return;
+      }
       const title = document.getElementById('post-title').value.trim();
       const category = document.getElementById('post-category').value;
       const target = document.getElementById('post-target').value.trim();
@@ -685,8 +778,8 @@
       btn.innerText = '發布中...';
 
       const { data: { session } } = await supabaseClient.auth.getSession();
-      const authorName = (currentUserProfile && currentUserProfile.custom_name) 
-        ? currentUserProfile.custom_name 
+      const authorName = (window.currentUserProfile && window.currentUserProfile.custom_name) 
+        ? window.currentUserProfile.custom_name 
         : (session?.user?.user_metadata?.full_name || session?.user?.email || '讀書會成員');
 
       const { error } = await supabaseClient
@@ -711,39 +804,65 @@
       }
 
       alert('筆記發布成功！');
-      closePublishModal();
+      window.closePublishModal();
       document.getElementById('post-title').value = '';
       document.getElementById('post-summary').value = '';
       document.getElementById('post-content').value = '';
-      fetchArticles();
-    }
+      window.fetchArticles();
+    };
 
-    async function fetchArticles() {
+    window.fetchArticles = async function() {
       const container = document.getElementById('articles-list-container');
       if (!container) return;
 
-      const { data: articles, error } = await supabaseClient
+      if (!supabaseClient) {
+        container.innerHTML = `<div class="p-6 text-center text-amber-400 font-mono text-xs">請先在程式碼填妥正確的 Supabase anon 金鑰。</div>`;
+        return;
+      }
+
+      // 關聯 profiles 查詢最新自訂暱稱與所屬系級，若無關聯則自動降級
+      let articles = null;
+      let error = null;
+
+      const res = await supabaseClient
         .from('articles')
-        .select('*')
+        .select('*, profiles:author_id(custom_name, full_name, department)')
         .order('created_at', { ascending: false });
 
+      if (res.error && res.error.message.includes('relationship')) {
+        const fallbackRes = await supabaseClient
+          .from('articles')
+          .select('*')
+          .order('created_at', { ascending: false });
+        articles = fallbackRes.data;
+        error = fallbackRes.error;
+      } else {
+        articles = res.data;
+        error = res.error;
+      }
+
       if (error) {
-        container.innerHTML = `<div class="p-6 text-center text-slate-500 font-mono">（受限內容：需為正式成員方可查閱資料庫文章）</div>`;
+        container.innerHTML = `<div class="p-6 text-center text-slate-500 font-mono text-xs">（受限內容：需為正式成員方可查閱資料庫文章）</div>`;
         return;
       }
 
       if (!articles || articles.length === 0) {
-        container.innerHTML = `<div class="p-6 text-center text-slate-500 font-mono">目前尚無電子書筆記，歡迎點選上方按鈕發布第一篇！</div>`;
+        container.innerHTML = `<div class="p-6 text-center text-slate-500 font-mono text-xs">目前尚無電子書筆記，歡迎點選上方按鈕發布第一篇！</div>`;
         return;
       }
 
-      container.innerHTML = articles.map(item => `
+      container.innerHTML = articles.map(item => {
+        // 優先讀取作者當前最新 custom_name 與 department
+        const authorDisplayName = item.profiles?.custom_name || item.profiles?.full_name || item.author_name || '讀書會成員';
+        const authorDept = item.profiles?.department ? ` · ${item.profiles.department}` : '';
+
+        return `
         <div class="bg-slate-800 border border-slate-700 rounded-xl p-6 space-y-4 shadow">
           <div class="border-b border-slate-700 pb-3 flex flex-col sm:flex-row justify-between sm:items-center gap-2">
             <div>
               <div class="flex items-center gap-2 mb-1">
                 <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-indigo-500/20 text-indigo-300 border border-indigo-500/40">${item.category}</span>
-                <span class="text-xs text-slate-400">作者：${item.author_name || '讀書會成員'}</span>
+                <span class="text-xs text-slate-400">作者：<b class="text-slate-200">${authorDisplayName}</b><span class="text-slate-400 text-[11px]">${authorDept}</span></span>
               </div>
               <h2 class="text-lg font-bold text-slate-100">${item.title}</h2>
             </div>
@@ -760,15 +879,20 @@
             ${item.content_markdown}
           </div>
         </div>
-      `).join('');
-    }
+      `;
+      }).join('');
+    };
 
     // ==========================================
-    // 5. 超會考題庫與輔助函式
+    // 4. 超會考題庫與輔助函式
     // ==========================================
-    async function fetchExamQuestions() {
-      if (!currentUserProfile || currentUserProfile.role === 'pending_approval') {
+    window.fetchExamQuestions = async function() {
+      if (!window.currentUserProfile || window.currentUserProfile.role === 'pending_approval') {
         alert('【權限受限】您的帳號處於待審核狀態，無法存取題庫。');
+        return;
+      }
+      if (!supabaseClient) {
+        alert('Supabase 尚未初始化！');
         return;
       }
 
@@ -800,18 +924,18 @@
         `).join('');
       }
 
-      showExamPaper();
-    }
+      window.showExamPaper();
+    };
 
-    function showExamPaper() {
+    window.showExamPaper = function() {
       document.getElementById('exam-filter-view').classList.add('hidden');
       document.getElementById('exam-paper-view').classList.remove('hidden');
-    }
+    };
 
-    function showExamFilter() {
+    window.showExamFilter = function() {
       document.getElementById('exam-paper-view').classList.add('hidden');
       document.getElementById('exam-filter-view').classList.remove('hidden');
-    }
+    };
 
     // 啟動電子時鐘
     setInterval(() => {
@@ -824,16 +948,18 @@
 
     // 網頁載入時啟動監聽與公告撈取
     window.addEventListener('DOMContentLoaded', async () => {
-      const { data: { session } } = await supabaseClient.auth.getSession();
-      renderAuthUI(session);
-
-      supabaseClient.auth.onAuthStateChange((_event, session) => {
+      if (supabaseClient) {
+        const { data: { session } } = await supabaseClient.auth.getSession();
         renderAuthUI(session);
-      });
 
-      fetchNotices();
-      fetchArticles();
-      fetchMembers();
+        supabaseClient.auth.onAuthStateChange((_event, session) => {
+          renderAuthUI(session);
+        });
+      }
+
+      window.fetchNotices();
+      window.fetchArticles();
+      window.fetchMembers();
     });
   </script>
 </body>
