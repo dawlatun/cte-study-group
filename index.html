@@ -132,28 +132,21 @@
       </div>
     </section>
 
-    <!-- 模組 2：準教師會 -->
+    <!-- 模組 2：準教師會 (動態載入成員名冊) -->
     <section id="tab-members" class="tab-content space-y-4">
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
         <div class="lg:col-span-4 bg-slate-800 border border-slate-700 rounded-xl p-4 space-y-3">
-          <h3 class="text-sm font-bold text-slate-200 flex items-center gap-2">
-            <i class="fa-solid fa-users text-indigo-400"></i> 讀書會成員名冊
-          </h3>
-          <div class="space-y-2">
-            <div onclick="selectMember('peisheng')" id="user-card-peisheng" class="p-3 rounded-lg bg-indigo-600/20 border-2 border-indigo-500 cursor-pointer transition">
-              <div class="flex justify-between items-center mb-1">
-                <span class="text-sm font-bold text-slate-100">陳培生</span>
-                <span class="text-[10px] bg-slate-800 text-indigo-300 border border-slate-700 px-1.5 py-0.5 rounded">管理員</span>
-              </div>
-              <p class="text-xs text-slate-400">中等教育・教育科技/英文</p>
-            </div>
-            <div onclick="selectMember('lin')" id="user-card-lin" class="p-3 rounded-lg bg-slate-900/50 border border-slate-700 cursor-pointer hover:border-slate-500 transition">
-              <div class="flex justify-between items-center mb-1">
-                <span class="text-sm font-bold text-slate-200">林特教</span>
-                <span class="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-1.5 py-0.5 rounded">師培團隊</span>
-              </div>
-              <p class="text-xs text-slate-400">特殊教育・身心障礙類</p>
-            </div>
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-bold text-slate-200 flex items-center gap-2">
+              <i class="fa-solid fa-users text-indigo-400"></i> 讀書會成員名冊 <span id="member-count-badge" class="text-xs text-slate-400">(--)</span>
+            </h3>
+            <button onclick="fetchMembers()" class="text-slate-400 hover:text-slate-200 text-xs transition" title="重新整理名冊">
+              <i class="fa-solid fa-arrows-rotate"></i>
+            </button>
+          </div>
+          <!-- 動態成員名冊列表 -->
+          <div id="members-list-container" class="space-y-2 max-h-[600px] overflow-y-auto pr-1">
+            <div class="p-6 text-center text-slate-500 font-mono text-xs">載入成員名冊中...</div>
           </div>
         </div>
         <div class="lg:col-span-8 bg-slate-800 border border-slate-700 rounded-xl p-5 space-y-4">
@@ -293,15 +286,7 @@
       document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
       
       // 顯示目標分頁內容
-      const target = document.getElementById(`tab-${tabName}`);
-      if (target) {
-        target.classList.add('active');
-      }
-
-      // 更新頂部按鈕高亮狀態
-      const tabs = ['bulletin', 'members', 'ebook', 'exam'];
-      tabs.forEach(t => {
-        const btn = document.getElementById(`nav-${t}`);
+      const target = document.getElementById(`tab-${tabName}`); if (target) { target.classList.add('active'); }  // 更新頂部按鈕高亮狀態 const tabs = ['bulletin', 'members', 'ebook', 'exam']; tabs.forEach(t => { const btn = document.getElementById(`nav-${t}`);
         if (btn) {
           if (t === tabName) {
             btn.className = 'px-3 py-1.5 rounded-md bg-indigo-600 text-white transition';
@@ -311,9 +296,12 @@
         }
       });
 
-      // 切換時如果切到電子書，主動刷新文章
+      // 切換時若切到電子書或名冊，主動刷新資料
       if (tabName === 'ebook' && typeof fetchArticles === 'function') {
         fetchArticles();
+      }
+      if (tabName === 'members' && typeof fetchMembers === 'function') {
+        fetchMembers();
       }
 
       // 檢查是否需覆蓋毛玻璃權限遮罩
@@ -378,6 +366,7 @@
             currentUserProfile.custom_name = newName.trim();
           }
           alert('稱呼已成功更新！');
+          fetchMembers(); // 即時更新名冊卡片
         }
       }
     }
@@ -536,7 +525,113 @@
     }
 
     // ==========================================
-    // 3. 電子書發布與動態讀取
+    // 3. 讀書會成員名冊與個人學術足跡動態載入
+    // ==========================================
+    let cachedMembers = [];
+    let selectedMemberId = null;
+
+    async function fetchMembers() {
+      const container = document.getElementById('members-list-container');
+      const countBadge = document.getElementById('member-count-badge');
+      if (!container) return;
+
+      const { data: members, error } = await supabaseClient
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: true });
+
+      if (error) {
+        container.innerHTML = `<div class="p-4 text-center text-red-400 font-mono text-xs">載入成員失敗：${error.message}</div>`;
+        return;
+      }
+
+      if (!members || members.length === 0) {
+        container.innerHTML = `<div class="p-4 text-center text-slate-500 font-mono text-xs">目前尚無成員加入</div>`;
+        return;
+      }
+
+      cachedMembers = members;
+      if (countBadge) countBadge.innerText = `(${members.length})`;
+
+      container.innerHTML = members.map((m) => {
+        const displayName = m.custom_name || m.full_name || m.email?.split('@')[0] || '讀書會成員';
+        
+        let roleBadge = '';
+        if (m.role === 'admin') {
+          roleBadge = '<span class="text-[10px] bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 px-1.5 py-0.5 rounded font-bold">管理員</span>';
+        } else if (m.role === 'pending_approval') {
+          roleBadge = '<span class="text-[10px] bg-amber-500/20 text-amber-400 border border-amber-500/40 px-1.5 py-0.5 rounded font-bold">審核中</span>';
+        } else {
+          roleBadge = '<span class="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-1.5 py-0.5 rounded font-bold">正式成員</span>';
+        }
+
+        const isSelected = selectedMemberId === m.id;
+        const cardClass = isSelected
+          ? 'p-3 rounded-lg bg-indigo-600/20 border-2 border-indigo-500 cursor-pointer transition'
+          : 'p-3 rounded-lg bg-slate-900/50 border border-slate-700 cursor-pointer hover:border-slate-500 transition';
+
+        return `
+          <div id="member-card-${m.id}" onclick="selectMemberById('${m.id}')" class="${cardClass}">
+            <div class="flex justify-between items-center mb-1">
+              <span class="text-sm font-bold text-slate-100 flex items-center gap-1.5">
+                <i class="fa-regular fa-user text-xs text-slate-400"></i> ${displayName}
+              </span>
+              ${roleBadge}
+            </div>
+            <p class="text-xs text-slate-400 truncate">${m.domain || m.specialty || '中等/特殊教育學程培訓中'}</p>
+          </div>
+        `;
+      }).join('');
+
+      // 預設高亮選取第一位成員
+      if (!selectedMemberId && members.length > 0) {
+        selectMemberById(members[0].id);
+      }
+    }
+
+    async function selectMemberById(memberId) {
+      selectedMemberId = memberId;
+      const member = cachedMembers.find(m => m.id === memberId);
+      if (!member) return;
+
+      // 更新名冊中卡片的高亮邊框
+      cachedMembers.forEach(m => {
+        const card = document.getElementById(`member-card-${m.id}`); if (card) { if (m.id === memberId) { card.className = 'p-3 rounded-lg bg-indigo-600/20 border-2 border-indigo-500 cursor-pointer transition'; } else { card.className = 'p-3 rounded-lg bg-slate-900/50 border border-slate-700 cursor-pointer hover:border-slate-500 transition'; } } });  const nameEl = document.getElementById('member-profile-name'); const listEl = document.getElementById('member-footprints'); const displayName = member.custom_name \vert{}\vert{} member.full_name \vert{}\vert{} member.email?.split('@')[0] \vert{}\vert{} '讀書會成員';  if (nameEl) { nameEl.innerText = `${displayName} 的個人學術足跡`;
+      }
+
+      if (listEl) {
+        listEl.innerHTML = `<div class="p-4 text-center text-slate-500 font-mono text-xs">載入學術足跡與發表文章中...</div>`;
+
+        // 查詢該成員在 articles 資料表發布的文章
+        const { data: userArticles } = await supabaseClient
+          .from('articles')
+          .select('*')
+          .eq('author_id', memberId)
+          .order('created_at', { ascending: false });
+
+        if (userArticles && userArticles.length > 0) {
+          listEl.innerHTML = userArticles.map(art => `
+            <div class="p-3.5 bg-slate-900 rounded-lg border border-slate-700">
+              <div class="flex justify-between items-center text-[10px] text-indigo-400 font-bold mb-1">
+                <span>【已撰寫電子書】${art.category}</span>
+                <span class="text-slate-500">${art.created_at ? art.created_at.split('T')[0] : '近期發布'}</span>
+              </div>
+              <h4 class="text-sm font-bold text-slate-200">${art.title}</h4>
+              <p class="text-xs text-slate-400 mt-1">${art.summary || '點選電子書專區研讀完整筆記與考點剖析。'}</p>
+            </div>
+          `).join('');
+        } else {
+          listEl.innerHTML = `
+            <div class="p-4 bg-slate-900/60 rounded-lg border border-slate-800 text-xs text-slate-400 text-center">
+              該成員目前尚未在電子書發布筆記。
+            </div>
+          `;
+        }
+      }
+    }
+
+    // ==========================================
+    // 4. 電子書發布與動態讀取
     // ==========================================
     function openPublishModal() {
       if (!currentUserProfile || currentUserProfile.role === 'pending_approval') {
@@ -567,7 +662,6 @@
       btn.innerText = '發布中...';
 
       const { data: { session } } = await supabaseClient.auth.getSession();
-      // 作者名稱優先使用自訂稱謂
       const authorName = (currentUserProfile && currentUserProfile.custom_name) 
         ? currentUserProfile.custom_name 
         : (session?.user?.user_metadata?.full_name || session?.user?.email || '讀書會成員');
@@ -621,114 +715,4 @@
       }
 
       container.innerHTML = articles.map(item => `
-        <div class="bg-slate-800 border border-slate-700 rounded-xl p-6 space-y-4 shadow">
-          <div class="border-b border-slate-700 pb-3 flex flex-col sm:flex-row justify-between sm:items-center gap-2">
-            <div>
-              <div class="flex items-center gap-2 mb-1">
-                <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-indigo-500/20 text-indigo-300 border border-indigo-500/40">${item.category}</span>
-                <span class="text-xs text-slate-400">作者：${item.author_name || '讀書會成員'}</span>
-              </div>
-              <h2 class="text-lg font-bold text-slate-100">${item.title}</h2>
-            </div>
-            <button onclick="switchTab('exam'); showExamPaper();" class="px-3 py-1.5 bg-indigo-600/30 hover:bg-indigo-600 border border-indigo-500/50 text-indigo-200 text-xs font-semibold rounded-lg transition flex items-center gap-1 self-start sm:self-auto">
-              <i class="fa-solid fa-play"></i> 練習關聯題目
-            </button>
-          </div>
-          ${item.summary ? `
-            <div class="text-xs leading-relaxed text-amber-300/90 bg-amber-500/10 border border-amber-500/20 p-2.5 rounded-lg">
-              <b>【觀念摘要】</b> ${item.summary}
-            </div>
-          ` : ''}
-          <div class="text-xs text-slate-300 leading-relaxed whitespace-pre-line bg-slate-900/60 p-4 rounded-lg border border-slate-800 font-mono">
-            ${item.content_markdown}
-          </div>
-        </div>
-      `).join('');
-    }
-
-    // ==========================================
-    // 4. 超會考題庫與輔助函式
-    // ==========================================
-    async function fetchExamQuestions() {
-      if (!currentUserProfile || currentUserProfile.role === 'pending_approval') {
-        alert('【權限受限】您的帳號處於待審核狀態，無法存取題庫。');
-        return;
-      }
-
-      const { data: questions, error } = await supabaseClient
-        .from('questions')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        alert('試題讀取失敗：' + error.message);
-        return;
-      }
-
-      const listContainer = document.getElementById('exam-questions-list');
-      if (listContainer && questions) {
-        listContainer.innerHTML = questions.map((q, idx) => `
-          <div class="p-4 rounded-lg bg-slate-900/70 border border-slate-700 space-y-3">
-            <div class="flex items-center justify-between text-xs text-indigo-400 font-bold">
-              <span>第 ${idx + 1} 題【${q.subject}】</span>
-              <span class="bg-slate-800 px-2 py-0.5 rounded text-slate-300">${q.category}</span>
-            </div>
-            <p class="text-slate-200 leading-relaxed">${q.question_text}</p>
-            ${q.options ? `
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-300 pt-2">
-                ${q.options.map(opt => `<div class="p-2 rounded bg-slate-800/60 border border-slate-700/60">${opt}</div>`).join('')}
-              </div>
-            ` : ''}
-          </div>
-        `).join('');
-      }
-
-      showExamPaper();
-    }
-
-    function showExamPaper() {
-      document.getElementById('exam-filter-view').classList.add('hidden');
-      document.getElementById('exam-paper-view').classList.remove('hidden');
-    }
-
-    function showExamFilter() {
-      document.getElementById('exam-paper-view').classList.add('hidden');
-      document.getElementById('exam-filter-view').classList.remove('hidden');
-    }
-
-    function selectMember(memberKey) {
-      const nameEl = document.getElementById('member-profile-name');
-      const listEl = document.getElementById('member-footprints');
-      if (memberKey === 'peisheng') {
-        nameEl.innerText = '陳培生 準教師 的個人學術足跡';
-        listEl.innerHTML = `<div class="p-3.5 bg-slate-900 rounded-lg border border-slate-700 text-xs text-slate-300">【已撰寫電子書】巴夫洛夫經典條件制約架構解說 (累積 AI 命題 14 題)。</div>`;
-      } else {
-        nameEl.innerText = '林特教 準教師 的個人學術足跡';
-        listEl.innerHTML = `<div class="p-3.5 bg-slate-900 rounded-lg border border-slate-700 text-xs text-slate-300">【已撰寫電子書】特殊教育個別化教育計畫 (IEP) 實戰剖析。</div>`;
-      }
-    }
-
-    // 啟動電子時鐘
-    setInterval(() => {
-      const clock = document.getElementById('live-clock');
-      if (clock) {
-        const now = new Date();
-        clock.innerText = now.toTimeString().split(' ')[0];
-      }
-    }, 1000);
-
-    // 網頁載入時啟動監聽與公告撈取
-    window.addEventListener('DOMContentLoaded', async () => {
-      const { data: { session } } = await supabaseClient.auth.getSession();
-      renderAuthUI(session);
-
-      supabaseClient.auth.onAuthStateChange((_event, session) => {
-        renderAuthUI(session);
-      });
-
-      fetchNotices();
-      fetchArticles();
-    });
-  </script>
-</body>
-</html>
+        <div class="bg-slate-800 border border-slate-70
