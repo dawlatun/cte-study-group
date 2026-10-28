@@ -106,4 +106,578 @@
           <h2 class="text-xl font-black tracking-wider text-amber-400 flex items-center gap-2">
             ★ 準教師戰鬥營 ★ 每日重要公告板
           </h2>
-          <p class="text-xs text-slate-400 mt-1 font-mono
+          <p class="text-xs text-slate-400 mt-1 font-mono tracking-wider">STATION DEPARTURE NOTICE BOARD - TAIWAN CTE</p>
+        </div>
+        <div id="live-clock" class="bg-slate-900 border border-slate-700 px-5 py-2 rounded-lg text-2xl font-mono font-bold text-amber-400 tracking-widest shadow-inner">
+          --:--:--
+        </div>
+      </div>
+
+      <div class="bg-slate-950 border border-slate-800 rounded-xl overflow-x-auto shadow-2xl">
+        <div class="min-w-[700px]">
+          <div class="grid grid-cols-12 bg-slate-900/90 px-4 py-3 text-xs font-mono text-slate-400 border-b border-slate-800 font-bold text-center">
+            <div class="col-span-2">【狀態】</div>
+            <div class="col-span-2">【剩餘天數】</div>
+            <div class="col-span-6 text-left">【考科／重要日程與說明】</div>
+            <div class="col-span-2">【外部連動】</div>
+          </div>
+          <!-- 動態公告由 JavaScript 注入 -->
+          <div id="notice-list-container" class="divide-y divide-slate-800/80 text-xs">
+            <div class="p-6 text-center text-slate-500 font-mono">載入最新公告中...</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 模組 2：準教師會 -->
+    <section id="tab-members" class="tab-content space-y-4">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div class="lg:col-span-4 bg-slate-800 border border-slate-700 rounded-xl p-4 space-y-3">
+          <h3 class="text-sm font-bold text-slate-200 flex items-center gap-2">
+            <i class="fa-solid fa-users text-indigo-400"></i> 讀書會成員名冊
+          </h3>
+          <div class="space-y-2">
+            <div onclick="selectMember('peisheng')" id="user-card-peisheng" class="p-3 rounded-lg bg-indigo-600/20 border-2 border-indigo-500 cursor-pointer transition">
+              <div class="flex justify-between items-center mb-1">
+                <span class="text-sm font-bold text-slate-100">陳培生</span>
+                <span class="text-[10px] bg-slate-800 text-indigo-300 border border-slate-700 px-1.5 py-0.5 rounded">管理員</span>
+              </div>
+              <p class="text-xs text-slate-400">中等教育・教育科技/英文</p>
+            </div>
+            <div onclick="selectMember('lin')" id="user-card-lin" class="p-3 rounded-lg bg-slate-900/50 border border-slate-700 cursor-pointer hover:border-slate-500 transition">
+              <div class="flex justify-between items-center mb-1">
+                <span class="text-sm font-bold text-slate-200">林特教</span>
+                <span class="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-1.5 py-0.5 rounded">師培團隊</span>
+              </div>
+              <p class="text-xs text-slate-400">特殊教育・身心障礙類</p>
+            </div>
+          </div>
+        </div>
+        <div class="lg:col-span-8 bg-slate-800 border border-slate-700 rounded-xl p-5 space-y-4">
+          <div class="border-b border-slate-700 pb-3">
+            <h3 id="member-profile-name" class="text-base font-bold text-slate-100">成員個人學術足跡</h3>
+            <p class="text-xs text-slate-400">點選左側名冊即時動態彙整其文章與命題紀錄</p>
+          </div>
+          <div id="member-footprints" class="space-y-3">
+            <div class="p-3.5 bg-slate-900 rounded-lg border border-slate-700 text-xs text-slate-400">
+              請從左側點選成員以查看歷程足跡。
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 模組 3：電子書（主題式教育專業筆記） -->
+    <section id="tab-ebook" class="tab-content space-y-4">
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between bg-slate-800 p-4 rounded-xl border border-slate-700 gap-3">
+        <div>
+          <h3 class="text-base font-bold text-slate-100 flex items-center gap-2">
+            <i class="fa-solid fa-book-open text-indigo-400"></i> 主題式教育專業電子書與筆記
+          </h3>
+          <p class="text-xs text-slate-400">研讀各學門核心概念，並支援協同撰寫分享。</p>
+        </div>
+        <button onclick="openPublishModal()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-lg shadow-md flex items-center gap-1.5 transition">
+          <i class="fa-solid fa-plus"></i> 發布新筆記
+        </button>
+      </div>
+
+      <!-- 動態筆記列表容器 -->
+      <div id="articles-list-container" class="space-y-4">
+        <div class="p-8 text-center text-slate-500 font-mono">載入電子書文章中...</div>
+      </div>
+
+      <!-- 發布文章彈窗 Modal -->
+      <div id="publish-modal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-700 rounded-xl max-w-2xl w-full p-6 space-y-4 shadow-2xl">
+          <div class="flex items-center justify-between border-b border-slate-700 pb-3">
+            <h4 class="text-sm font-bold text-slate-100 flex items-center gap-2">
+              <i class="fa-solid fa-pen-nib text-indigo-400"></i> 撰寫教育專業電子書筆記
+            </h4>
+            <button onclick="closePublishModal()" class="text-slate-400 hover:text-slate-200 text-sm">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+
+          <div class="space-y-3 text-xs">
+            <div>
+              <label class="block text-slate-300 font-bold mb-1">文章標題</label>
+              <input id="post-title" type="text" placeholder="例如：皮亞傑認知發展論之四階段教學意涵" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-slate-100 focus:outline-none focus:border-indigo-500">
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-slate-300 font-bold mb-1">考科／學門分類</label>
+                <select id="post-category" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-slate-100 focus:outline-none focus:border-indigo-500">
+                  <option value="教育心理學">教育心理學</option>
+                  <option value="教育哲學">教育哲學</option>
+                  <option value="教育社會學">教育社會學</option>
+                  <option value="課程發展與設計">課程發展與設計</option>
+                  <option value="教學原理">教學原理</option>
+                  <option value="學習評量">學習評量</option>
+                  <option value="青少年發展與輔導">青少年發展與輔導</option>
+                  <option value="教育行政">教育行政</option>
+                  <option value="特殊教育導論">特殊教育導論</option>
+                  <option value="教育法規與制度">教育法規與制度</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-slate-300 font-bold mb-1">適用對象</label>
+                <input id="post-target" type="text" placeholder="例如：中等教育・教資通用" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-slate-100 focus:outline-none focus:border-indigo-500">
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-slate-300 font-bold mb-1">觀念摘要與核心考點</label>
+              <input id="post-summary" type="text" placeholder="一句話歸納核心考點或定義" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-slate-100 focus:outline-none focus:border-indigo-500">
+            </div>
+
+            <div>
+              <label class="block text-slate-300 font-bold mb-1">筆記正文 (支援詳細理論條列與考題剖析)</label>
+              <textarea id="post-content" rows="6" placeholder="詳細說明理論架構、重要人物論點、情境應用或考題常見迷思..." class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-slate-100 focus:outline-none focus:border-indigo-500 font-mono"></textarea>
+            </div>
+          </div>
+
+          <div class="flex justify-end gap-2 pt-2 border-t border-slate-700">
+            <button onclick="closePublishModal()" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition">
+              取消
+            </button>
+            <button id="btn-submit-post" onclick="submitArticle()" class="px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow transition flex items-center gap-1.5">
+              <i class="fa-solid fa-cloud-arrow-up"></i> 確認發布
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 模組 4：超會考 (題庫與作答) -->
+    <section id="tab-exam" class="tab-content space-y-4">
+      <div id="exam-filter-view" class="bg-slate-800 border border-slate-700 rounded-xl p-6 space-y-4">
+        <h3 class="text-base font-bold text-slate-100 flex items-center gap-2">
+          <i class="fa-solid fa-sliders text-indigo-400"></i> 教檢與教甄線上組卷機
+        </h3>
+        <p class="text-xs text-slate-400">支援素養情境導向題型，仿真 15 行作答格線與即時釋疑流程。</p>
+        <button onclick="fetchExamQuestions()" class="px-5 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-lg transition flex items-center gap-2">
+          <i class="fa-solid fa-file-pen"></i> 從 Supabase 題庫載入試卷
+        </button>
+      </div>
+
+      <div id="exam-paper-view" class="hidden bg-slate-800 border border-slate-700 rounded-xl p-6 space-y-6">
+        <div class="flex items-center justify-between border-b border-slate-700 pb-3">
+          <h3 class="text-base font-bold text-slate-100">模擬試卷作答檢視</h3>
+          <button onclick="showExamFilter()" class="px-3 py-1.5 rounded bg-slate-700 hover:bg-slate-600 text-xs text-slate-300">
+            返回出題機
+          </button>
+        </div>
+        <div id="exam-questions-list" class="space-y-6 text-sm">
+          <!-- 動態載入試題 -->
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    // ==========================================
+    // 1. 最優先宣告：分頁切換與全域狀態（確保點擊永不失效）
+    // ==========================================
+    let currentActiveTab = 'bulletin';
+    let currentUserProfile = null;
+
+    function switchTab(tabName) {
+      currentActiveTab = tabName;
+
+      // 隱藏所有分頁內容
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+      
+      // 顯示目標分頁內容
+      const target = document.getElementById(`tab-${tabName}`);
+      if (target) {
+        target.classList.add('active');
+      }
+
+      // 更新頂部按鈕高亮狀態
+      const tabs = ['bulletin', 'members', 'ebook', 'exam'];
+      tabs.forEach(t => {
+        const btn = document.getElementById(`nav-${t}`);
+        if (btn) {
+          if (t === tabName) {
+            btn.className = 'px-3 py-1.5 rounded-md bg-indigo-600 text-white transition';
+          } else {
+            btn.className = 'px-3 py-1.5 rounded-md text-slate-400 hover:text-slate-200 transition';
+          }
+        }
+      });
+
+      // 切換時如果切到電子書，主動刷新文章
+      if (tabName === 'ebook' && typeof fetchArticles === 'function') {
+        fetchArticles();
+      }
+
+      // 檢查是否需覆蓋毛玻璃權限遮罩
+      if (typeof checkPermissionOverlay === 'function') {
+        checkPermissionOverlay();
+      }
+    }
+
+    // ==========================================
+    // 2. Supabase 初始化配置
+    // ==========================================
+    const SUPABASE_URL = 'https://evykaepyjsnzjestaykc.supabase.co';
+    // 務必放入您在 Supabase Project Settings ➜ API 複製的真實 anon 金鑰（單行、無換行）
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2eWthZXB5anNuemplc3RheWtjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIyOTQ4MTEsImV4cCI6MjEwNzg3MDgxMX0.GzUKmJMYR_mMexkbb5iHFddNhtSY_qiJATFC7d0PpOA';
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // Google OAuth 登入
+    async function loginWithGoogle() {
+      const { error } = await supabaseClient.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.href.split('#')[0]
+        }
+      });
+      if (error) {
+        alert('登入發起失敗：' + error.message);
+      }
+    }
+
+    // 登出
+    async function logout() {
+      await supabaseClient.auth.signOut();
+      currentUserProfile = null;
+      window.location.href = window.location.origin;
+    }
+
+    // 檢查受保護頁籤的權限遮罩
+    function checkPermissionOverlay() {
+      const overlay = document.getElementById('pending-lock-overlay');
+      const titleEl = document.getElementById('overlay-title');
+      const descEl = document.getElementById('overlay-desc');
+      if (!overlay) return;
+
+      const protectedTabs = ['members', 'ebook', 'exam'];
+      const isProtectedTab = protectedTabs.includes(currentActiveTab);
+
+      const isGuest = !currentUserProfile;
+      const isPending = currentUserProfile && currentUserProfile.role === 'pending_approval';
+
+      if (isProtectedTab && (isGuest || isPending)) {
+        overlay.classList.remove('hidden');
+        if (isGuest) {
+          if (titleEl) titleEl.innerText = '請先登入系統';
+          if (descEl) descEl.innerHTML = '核心題庫與電子書筆記僅對讀書會成員開放。<br>請點選右上角「Google 登入」以存取完整學習資源。';
+        } else {
+          if (titleEl) titleEl.innerText = '身分資格審核中';
+          if (descEl) descEl.innerHTML = '歡迎加入準教師戰鬥營！您目前的身分為 <span class="text-amber-400 font-semibold font-mono">待審核 (pending)</span>。<br>為確保命題品質，請待管理團隊確認教育學程身分後開通。';
+        }
+      } else {
+        overlay.classList.add('hidden');
+      }
+    }
+
+    // 渲染右上角身分狀態與頭像
+    async function renderAuthUI(session) {
+      const btnLogin = document.getElementById('btn-login');
+      const userInfo = document.getElementById('user-info');
+      const userAvatar = document.getElementById('user-avatar');
+      const userName = document.getElementById('user-name');
+      const userBadge = document.getElementById('user-badge');
+
+      if (session && session.user) {
+        if (btnLogin) btnLogin.classList.add('hidden');
+        if (userInfo) userInfo.classList.remove('hidden');
+
+        const meta = session.user.user_metadata || {};
+        if (userName) userName.innerText = meta.full_name || meta.name || session.user.email.split('@')[0];
+        if (userAvatar) userAvatar.src = meta.avatar_url || 'https://via.placeholder.com/32';
+
+        try {
+          const { data: profile } = await supabaseClient
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .maybeSingle();
+
+          currentUserProfile = profile;
+
+          if (profile && userBadge) {
+            if (profile.role === 'pending_approval') {
+              userBadge.innerText = '身分審核中';
+              userBadge.className = 'text-[10px] text-amber-400 font-bold';
+            } else if (profile.role === 'admin') {
+              userBadge.innerText = '系統管理員';
+              userBadge.className = 'text-[10px] text-indigo-300 font-bold';
+            } else {
+              userBadge.innerText = '正式成員';
+              userBadge.className = 'text-[10px] text-emerald-400 font-bold';
+            }
+          }
+        } catch (e) {
+          console.error('查詢 profile 失敗：', e);
+        }
+      } else {
+        currentUserProfile = null;
+        if (btnLogin) btnLogin.classList.remove('hidden');
+        if (userInfo) userInfo.classList.add('hidden');
+      }
+
+      checkPermissionOverlay();
+    }
+
+    // 動態載入車站布告欄
+    async function fetchNotices() {
+      const container = document.getElementById('notice-list-container');
+      if (!container) return;
+
+      const { data: notices, error } = await supabaseClient
+        .from('notices')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        container.innerHTML = `<div class="p-6 text-center text-red-400 font-mono">公告載入失敗：${error.message}</div>`;
+        return;
+      }
+
+      if (!notices || notices.length === 0) {
+        container.innerHTML = `<div class="p-6 text-center text-slate-500 font-mono">目前尚無公告</div>`;
+        return;
+      }
+
+      container.innerHTML = notices.map(item => {
+        let lightHtml = '';
+        if (item.priority === 'urgent') {
+          lightHtml = `
+            <span class="w-2.5 h-2.5 rounded-full bg-red-500 shadow-lg animate-ping"></span>
+            <span class="px-2 py-0.5 rounded bg-red-500/20 text-red-400 border border-red-500/40 font-bold">緊急</span>
+          `;
+        } else if (item.priority === 'important') {
+          lightHtml = `
+            <span class="w-2.5 h-2.5 rounded-full bg-sky-400 shadow-lg"></span>
+            <span class="px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-500/40 font-bold">重要</span>
+          `;
+        } else {
+          lightHtml = `
+            <span class="w-2.5 h-2.5 rounded-full bg-slate-200 shadow"></span>
+            <span class="px-2 py-0.5 rounded bg-slate-700/60 text-slate-300 border border-slate-600 font-bold">一般</span>
+          `;
+        }
+
+        return `
+          <div class="grid grid-cols-12 px-4 py-4 items-center hover:bg-slate-900/40 transition">
+            <div class="col-span-2 flex items-center justify-center gap-2">${lightHtml}</div>
+            <div class="col-span-2 flex justify-center">
+              <div class="bg-amber-400/10 border border-amber-400/30 text-amber-300 font-mono text-lg font-black px-3 py-1 rounded shadow tracking-widest">
+                ${item.days_label || 'D-Day'}
+              </div>
+            </div>
+            <div class="col-span-6 pr-4">
+              <div class="flex items-center gap-2 mb-1">
+                <span class="font-semibold px-1.5 py-0.5 bg-slate-800 border border-slate-700 rounded text-slate-300 text-[11px]">${item.target_exam || '通用'}</span>
+                <span class="font-bold text-slate-100 text-sm">${item.title}</span>
+              </div>
+              <p class="text-slate-400">${item.content}</p>
+            </div>
+            <div class="col-span-2 flex justify-center">
+              <a href="https://calendar.google.com" target="_blank" class="px-2.5 py-1.5 bg-indigo-600/30 hover:bg-indigo-600 border border-indigo-500/50 rounded font-medium text-indigo-200 transition flex items-center gap-1">
+                <i class="fa-regular fa-calendar-check"></i> 加到日曆
+              </a>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // ==========================================
+    // 3. 電子書發布與動態讀取
+    // ==========================================
+    function openPublishModal() {
+      if (!currentUserProfile || currentUserProfile.role === 'pending_approval') {
+        alert('【權限受限】僅正式成員與管理員具備發布電子書筆記權限。');
+        return;
+      }
+      document.getElementById('publish-modal').classList.remove('hidden');
+    }
+
+    function closePublishModal() {
+      document.getElementById('publish-modal').classList.add('hidden');
+    }
+
+    async function submitArticle() {
+      const title = document.getElementById('post-title').value.trim();
+      const category = document.getElementById('post-category').value;
+      const target = document.getElementById('post-target').value.trim();
+      const summary = document.getElementById('post-summary').value.trim();
+      const content = document.getElementById('post-content').value.trim();
+      const btn = document.getElementById('btn-submit-post');
+
+      if (!title || !content) {
+        alert('請填寫文章標題與筆記內容！');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerText = '發布中...';
+
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      const authorName = session?.user?.user_metadata?.full_name || session?.user?.email || '讀書會成員';
+
+      const { error } = await supabaseClient
+        .from('articles')
+        .insert([
+          {
+            title: title,
+            category: category,
+            summary: summary || target,
+            content_markdown: content,
+            author_id: session?.user?.id,
+            author_name: authorName
+          }
+        ]);
+
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> 確認發布';
+
+      if (error) {
+        alert('發布失敗：' + error.message);
+        return;
+      }
+
+      alert('筆記發布成功！');
+      closePublishModal();
+      document.getElementById('post-title').value = '';
+      document.getElementById('post-summary').value = '';
+      document.getElementById('post-content').value = '';
+      fetchArticles();
+    }
+
+    async function fetchArticles() {
+      const container = document.getElementById('articles-list-container');
+      if (!container) return;
+
+      const { data: articles, error } = await supabaseClient
+        .from('articles')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        container.innerHTML = `<div class="p-6 text-center text-slate-500 font-mono">（受限內容：需為正式成員方可查閱資料庫文章）</div>`;
+        return;
+      }
+
+      if (!articles || articles.length === 0) {
+        container.innerHTML = `<div class="p-6 text-center text-slate-500 font-mono">目前尚無電子書筆記，歡迎點選上方按鈕發布第一篇！</div>`;
+        return;
+      }
+
+      container.innerHTML = articles.map(item => `
+        <div class="bg-slate-800 border border-slate-700 rounded-xl p-6 space-y-4 shadow">
+          <div class="border-b border-slate-700 pb-3 flex flex-col sm:flex-row justify-between sm:items-center gap-2">
+            <div>
+              <div class="flex items-center gap-2 mb-1">
+                <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-indigo-500/20 text-indigo-300 border border-indigo-500/40">${item.category}</span>
+                <span class="text-xs text-slate-400">作者：${item.author_name || '讀書會成員'}</span>
+              </div>
+              <h2 class="text-lg font-bold text-slate-100">${item.title}</h2>
+            </div>
+            <button onclick="switchTab('exam'); showExamPaper();" class="px-3 py-1.5 bg-indigo-600/30 hover:bg-indigo-600 border border-indigo-500/50 text-indigo-200 text-xs font-semibold rounded-lg transition flex items-center gap-1 self-start sm:self-auto">
+              <i class="fa-solid fa-play"></i> 練習關聯題目
+            </button>
+          </div>
+          ${item.summary ? `
+            <div class="text-xs leading-relaxed text-amber-300/90 bg-amber-500/10 border border-amber-500/20 p-2.5 rounded-lg">
+              <b>【觀念摘要】</b> ${item.summary}
+            </div>
+          ` : ''}
+          <div class="text-xs text-slate-300 leading-relaxed whitespace-pre-line bg-slate-900/60 p-4 rounded-lg border border-slate-800 font-mono">
+            ${item.content_markdown}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // ==========================================
+    // 4. 超會考題庫與輔助函式
+    // ==========================================
+    async function fetchExamQuestions() {
+      if (!currentUserProfile || currentUserProfile.role === 'pending_approval') {
+        alert('【權限受限】您的帳號處於待審核狀態，無法存取題庫。');
+        return;
+      }
+
+      const { data: questions, error } = await supabaseClient
+        .from('questions')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        alert('試題讀取失敗：' + error.message);
+        return;
+      }
+
+      const listContainer = document.getElementById('exam-questions-list');
+      if (listContainer && questions) {
+        listContainer.innerHTML = questions.map((q, idx) => `
+          <div class="p-4 rounded-lg bg-slate-900/70 border border-slate-700 space-y-3">
+            <div class="flex items-center justify-between text-xs text-indigo-400 font-bold">
+              <span>第 ${idx + 1} 題【${q.subject}】</span>
+              <span class="bg-slate-800 px-2 py-0.5 rounded text-slate-300">${q.category}</span>
+            </div>
+            <p class="text-slate-200 leading-relaxed">${q.question_text}</p>
+            ${q.options ? `
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-300 pt-2">
+                ${q.options.map(opt => `<div class="p-2 rounded bg-slate-800/60 border border-slate-700/60">${opt}</div>`).join('')}
+              </div>
+            ` : ''}
+          </div>
+        `).join('');
+      }
+
+      showExamPaper();
+    }
+
+    function showExamPaper() {
+      document.getElementById('exam-filter-view').classList.add('hidden');
+      document.getElementById('exam-paper-view').classList.remove('hidden');
+    }
+
+    function showExamFilter() {
+      document.getElementById('exam-paper-view').classList.add('hidden');
+      document.getElementById('exam-filter-view').classList.remove('hidden');
+    }
+
+    function selectMember(memberKey) {
+      const nameEl = document.getElementById('member-profile-name');
+      const listEl = document.getElementById('member-footprints');
+      if (memberKey === 'peisheng') {
+        nameEl.innerText = '陳培生 準教師 的個人學術足跡';
+        listEl.innerHTML = `<div class="p-3.5 bg-slate-900 rounded-lg border border-slate-700 text-xs text-slate-300">【已撰寫電子書】巴夫洛夫經典條件制約架構解說 (累積 AI 命題 14 題)。</div>`;
+      } else {
+        nameEl.innerText = '林特教 準教師 的個人學術足跡';
+        listEl.innerHTML = `<div class="p-3.5 bg-slate-900 rounded-lg border border-slate-700 text-xs text-slate-300">【已撰寫電子書】特殊教育個別化教育計畫 (IEP) 實戰剖析。</div>`;
+      }
+    }
+
+    // 啟動電子時鐘
+    setInterval(() => {
+      const clock = document.getElementById('live-clock');
+      if (clock) {
+        const now = new Date();
+        clock.innerText = now.toTimeString().split(' ')[0];
+      }
+    }, 1000);
+
+    // 網頁載入時啟動監聽與公告撈取
+    window.addEventListener('DOMContentLoaded', async () => {
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      renderAuthUI(session);
+
+      supabaseClient.auth.onAuthStateChange((_event, session) => {
+        renderAuthUI(session);
+      });
+
+      fetchNotices();
+      fetchArticles();
+    });
+  </script>
+</body>
+</html>
