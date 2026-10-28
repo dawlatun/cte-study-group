@@ -286,7 +286,15 @@
       document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
       
       // 顯示目標分頁內容
-      const target = document.getElementById(`tab-${tabName}`); if (target) { target.classList.add('active'); }  // 更新頂部按鈕高亮狀態 const tabs = ['bulletin', 'members', 'ebook', 'exam']; tabs.forEach(t => { const btn = document.getElementById(`nav-${t}`);
+      const target = document.getElementById(`tab-${tabName}`);
+      if (target) {
+        target.classList.add('active');
+      }
+
+      // 更新頂部按鈕高亮狀態
+      const tabs = ['bulletin', 'members', 'ebook', 'exam'];
+      tabs.forEach(t => {
+        const btn = document.getElementById(`nav-${t}`);
         if (btn) {
           if (t === tabName) {
             btn.className = 'px-3 py-1.5 rounded-md bg-indigo-600 text-white transition';
@@ -596,7 +604,22 @@
 
       // 更新名冊中卡片的高亮邊框
       cachedMembers.forEach(m => {
-        const card = document.getElementById(`member-card-${m.id}`); if (card) { if (m.id === memberId) { card.className = 'p-3 rounded-lg bg-indigo-600/20 border-2 border-indigo-500 cursor-pointer transition'; } else { card.className = 'p-3 rounded-lg bg-slate-900/50 border border-slate-700 cursor-pointer hover:border-slate-500 transition'; } } });  const nameEl = document.getElementById('member-profile-name'); const listEl = document.getElementById('member-footprints'); const displayName = member.custom_name \vert{}\vert{} member.full_name \vert{}\vert{} member.email?.split('@')[0] \vert{}\vert{} '讀書會成員';  if (nameEl) { nameEl.innerText = `${displayName} 的個人學術足跡`;
+        const card = document.getElementById(`member-card-${m.id}`);
+        if (card) {
+          if (m.id === memberId) {
+            card.className = 'p-3 rounded-lg bg-indigo-600/20 border-2 border-indigo-500 cursor-pointer transition';
+          } else {
+            card.className = 'p-3 rounded-lg bg-slate-900/50 border border-slate-700 cursor-pointer hover:border-slate-500 transition';
+          }
+        }
+      });
+
+      const nameEl = document.getElementById('member-profile-name');
+      const listEl = document.getElementById('member-footprints');
+      const displayName = member.custom_name || member.full_name || member.email?.split('@')[0] || '讀書會成員';
+
+      if (nameEl) {
+        nameEl.innerText = `${displayName} 的個人學術足跡`;
       }
 
       if (listEl) {
@@ -715,4 +738,103 @@
       }
 
       container.innerHTML = articles.map(item => `
-        <div class="bg-slate-800 border border-slate-70
+        <div class="bg-slate-800 border border-slate-700 rounded-xl p-6 space-y-4 shadow">
+          <div class="border-b border-slate-700 pb-3 flex flex-col sm:flex-row justify-between sm:items-center gap-2">
+            <div>
+              <div class="flex items-center gap-2 mb-1">
+                <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-indigo-500/20 text-indigo-300 border border-indigo-500/40">${item.category}</span>
+                <span class="text-xs text-slate-400">作者：${item.author_name || '讀書會成員'}</span>
+              </div>
+              <h2 class="text-lg font-bold text-slate-100">${item.title}</h2>
+            </div>
+            <button onclick="switchTab('exam'); showExamPaper();" class="px-3 py-1.5 bg-indigo-600/30 hover:bg-indigo-600 border border-indigo-500/50 text-indigo-200 text-xs font-semibold rounded-lg transition flex items-center gap-1 self-start sm:self-auto">
+              <i class="fa-solid fa-play"></i> 練習關聯題目
+            </button>
+          </div>
+          ${item.summary ? `
+            <div class="text-xs leading-relaxed text-amber-300/90 bg-amber-500/10 border border-amber-500/20 p-2.5 rounded-lg">
+              <b>【觀念摘要】</b> ${item.summary}
+            </div>
+          ` : ''}
+          <div class="text-xs text-slate-300 leading-relaxed whitespace-pre-line bg-slate-900/60 p-4 rounded-lg border border-slate-800 font-mono">
+            ${item.content_markdown}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // ==========================================
+    // 5. 超會考題庫與輔助函式
+    // ==========================================
+    async function fetchExamQuestions() {
+      if (!currentUserProfile || currentUserProfile.role === 'pending_approval') {
+        alert('【權限受限】您的帳號處於待審核狀態，無法存取題庫。');
+        return;
+      }
+
+      const { data: questions, error } = await supabaseClient
+        .from('questions')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        alert('試題讀取失敗：' + error.message);
+        return;
+      }
+
+      const listContainer = document.getElementById('exam-questions-list');
+      if (listContainer && questions) {
+        listContainer.innerHTML = questions.map((q, idx) => `
+          <div class="p-4 rounded-lg bg-slate-900/70 border border-slate-700 space-y-3">
+            <div class="flex items-center justify-between text-xs text-indigo-400 font-bold">
+              <span>第 ${idx + 1} 題【${q.subject}】</span>
+              <span class="bg-slate-800 px-2 py-0.5 rounded text-slate-300">${q.category}</span>
+            </div>
+            <p class="text-slate-200 leading-relaxed">${q.question_text}</p>
+            ${q.options ? `
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-300 pt-2">
+                ${q.options.map(opt => `<div class="p-2 rounded bg-slate-800/60 border border-slate-700/60">${opt}</div>`).join('')}
+              </div>
+            ` : ''}
+          </div>
+        `).join('');
+      }
+
+      showExamPaper();
+    }
+
+    function showExamPaper() {
+      document.getElementById('exam-filter-view').classList.add('hidden');
+      document.getElementById('exam-paper-view').classList.remove('hidden');
+    }
+
+    function showExamFilter() {
+      document.getElementById('exam-paper-view').classList.add('hidden');
+      document.getElementById('exam-filter-view').classList.remove('hidden');
+    }
+
+    // 啟動電子時鐘
+    setInterval(() => {
+      const clock = document.getElementById('live-clock');
+      if (clock) {
+        const now = new Date();
+        clock.innerText = now.toTimeString().split(' ')[0];
+      }
+    }, 1000);
+
+    // 網頁載入時啟動監聽與公告撈取
+    window.addEventListener('DOMContentLoaded', async () => {
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      renderAuthUI(session);
+
+      supabaseClient.auth.onAuthStateChange((_event, session) => {
+        renderAuthUI(session);
+      });
+
+      fetchNotices();
+      fetchArticles();
+      fetchMembers();
+    });
+  </script>
+</body>
+</html>
