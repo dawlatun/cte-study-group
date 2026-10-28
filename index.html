@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>準教師戰鬥營 - 教資教甄線上讀書會系統</title>
+  <title>準教師戰鬥營 - 教師甄試暨資格考線上讀書會系統</title>
   
   <!-- 載入 Supabase SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -34,7 +34,7 @@
       </div>
       <div>
         <h1 class="text-base font-bold text-slate-100 flex items-center gap-2">
-          準教師戰鬥營
+          準教師戰鬥營 
           <span class="text-[10px] bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 px-2 py-0.5 rounded">教資教甄讀書會</span>
         </h1>
         <p class="text-xs text-slate-400">雙向互助學習・智慧出題與研討系統</p>
@@ -226,16 +226,50 @@
 
   <script>
     // ==========================================
-    // 1. Supabase 初始化配置
+    // 1. 最優先宣告：分頁切換與全域狀態（確保點擊永不失效）
+    // ==========================================
+    let currentActiveTab = 'bulletin';
+    let currentUserProfile = null;
+
+    function switchTab(tabName) {
+      currentActiveTab = tabName;
+
+      // 隱藏所有分頁內容
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+      
+      // 顯示目標分頁內容
+      const target = document.getElementById(`tab-${tabName}`);
+      if (target) {
+        target.classList.add('active');
+      }
+
+      // 更新頂部按鈕高亮狀態
+      const tabs = ['bulletin', 'members', 'ebook', 'exam'];
+      tabs.forEach(t => {
+        const btn = document.getElementById(`nav-${t}`);
+        if (btn) {
+          if (t === tabName) {
+            btn.className = 'px-3 py-1.5 rounded-md bg-indigo-600 text-white transition';
+          } else {
+            btn.className = 'px-3 py-1.5 rounded-md text-slate-400 hover:text-slate-200 transition';
+          }
+        }
+      });
+
+      // 檢查是否需覆蓋毛玻璃權限遮罩
+      if (typeof checkPermissionOverlay === 'function') {
+        checkPermissionOverlay();
+      }
+    }
+
+    // ==========================================
+    // 2. Supabase 初始化配置
     // ==========================================
     const SUPABASE_URL = 'https://evykaepyjsnzjestaykc.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2eWthZXB5anNuemplc3RheWtjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE1NTEzNDgsImV4cCI6MjA3NzEyNzM0OH0.Xb-gA14fUa3_w01j_V_1rA2h1hE0c66j1R1f-yCqP-4'; // 您提供的 anon 金鑰
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2eWthZXB5anNuemplc3RheWtjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE1NTEzNDgsImV4cCI6MjA3NzEyNzM0OH0.Xb-gA14fUa3_w01j_V_1rA2h1hE0c66j1R1f-yCqP-4';
     const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    let currentUserProfile = null;
-    let currentActiveTab = 'bulletin';
-
-    // Google 登入
+    // Google OAuth 登入
     async function loginWithGoogle() {
       const { error } = await supabaseClient.auth.signInWithOAuth({
         provider: 'google',
@@ -255,7 +289,7 @@
       window.location.href = window.location.origin;
     }
 
-    // 權限遮罩檢查
+    // 檢查受保護頁籤的權限遮罩
     function checkPermissionOverlay() {
       const overlay = document.getElementById('pending-lock-overlay');
       const titleEl = document.getElementById('overlay-title');
@@ -275,4 +309,206 @@
           if (descEl) descEl.innerHTML = '核心題庫與電子書筆記僅對讀書會成員開放。<br>請點選右上角「Google 登入」以存取完整學習資源。';
         } else {
           if (titleEl) titleEl.innerText = '身分資格審核中';
-          if (descEl) descEl.innerHTML = '歡迎加入準教師戰鬥營！您目前的身分為 <span class="text-amber-400 font-semibold font-mono
+          if (descEl) descEl.innerHTML = '歡迎加入準教師戰鬥營！您目前的身分為 <span class="text-amber-400 font-semibold font-mono">待審核 (pending)</span>。<br>為確保命題品質，請待管理團隊確認教育學程身分後開通。';
+        }
+      } else {
+        overlay.classList.add('hidden');
+      }
+    }
+
+    // 渲染右上角身分狀態與頭像
+    async function renderAuthUI(session) {
+      const btnLogin = document.getElementById('btn-login');
+      const userInfo = document.getElementById('user-info');
+      const userAvatar = document.getElementById('user-avatar');
+      const userName = document.getElementById('user-name');
+      const userBadge = document.getElementById('user-badge');
+
+      if (session && session.user) {
+        if (btnLogin) btnLogin.classList.add('hidden');
+        if (userInfo) userInfo.classList.remove('hidden');
+
+        const meta = session.user.user_metadata || {};
+        if (userName) userName.innerText = meta.full_name || meta.name || session.user.email.split('@')[0];
+        if (userAvatar) userAvatar.src = meta.avatar_url || 'https://via.placeholder.com/32';
+
+        try {
+          const { data: profile } = await supabaseClient
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .maybeSingle();
+
+          currentUserProfile = profile;
+
+          if (profile && userBadge) {
+            if (profile.role === 'pending_approval') {
+              userBadge.innerText = '身分審核中';
+              userBadge.className = 'text-[10px] text-amber-400 font-bold';
+            } else if (profile.role === 'admin') {
+              userBadge.innerText = '系統管理員';
+              userBadge.className = 'text-[10px] text-indigo-300 font-bold';
+            } else {
+              userBadge.innerText = '正式成員';
+              userBadge.className = 'text-[10px] text-emerald-400 font-bold';
+            }
+          }
+        } catch (e) {
+          console.error('查詢 profile 失敗：', e);
+        }
+      } else {
+        currentUserProfile = null;
+        if (btnLogin) btnLogin.classList.remove('hidden');
+        if (userInfo) userInfo.classList.add('hidden');
+      }
+
+      checkPermissionOverlay();
+    }
+
+    // 動態載入車站布告欄
+    async function fetchNotices() {
+      const container = document.getElementById('notice-list-container');
+      if (!container) return;
+
+      const { data: notices, error } = await supabaseClient
+        .from('notices')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        container.innerHTML = `<div class="p-6 text-center text-red-400 font-mono">公告載入失敗：${error.message}</div>`;
+        return;
+      }
+
+      if (!notices || notices.length === 0) {
+        container.innerHTML = `<div class="p-6 text-center text-slate-500 font-mono">目前尚無公告</div>`;
+        return;
+      }
+
+      container.innerHTML = notices.map(item => {
+        let lightHtml = '';
+        if (item.priority === 'urgent') {
+          lightHtml = `
+            <span class="w-2.5 h-2.5 rounded-full bg-red-500 shadow-lg animate-ping"></span>
+            <span class="px-2 py-0.5 rounded bg-red-500/20 text-red-400 border border-red-500/40 font-bold">緊急</span>
+          `;
+        } else if (item.priority === 'important') {
+          lightHtml = `
+            <span class="w-2.5 h-2.5 rounded-full bg-sky-400 shadow-lg"></span>
+            <span class="px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-500/40 font-bold">重要</span>
+          `;
+        } else {
+          lightHtml = `
+            <span class="w-2.5 h-2.5 rounded-full bg-slate-200 shadow"></span>
+            <span class="px-2 py-0.5 rounded bg-slate-700/60 text-slate-300 border border-slate-600 font-bold">一般</span>
+          `;
+        }
+
+        return `
+          <div class="grid grid-cols-12 px-4 py-4 items-center hover:bg-slate-900/40 transition">
+            <div class="col-span-2 flex items-center justify-center gap-2">${lightHtml}</div>
+            <div class="col-span-2 flex justify-center">
+              <div class="bg-amber-400/10 border border-amber-400/30 text-amber-300 font-mono text-lg font-black px-3 py-1 rounded shadow tracking-widest">
+                ${item.days_label || 'D-Day'}
+              </div>
+            </div>
+            <div class="col-span-6 pr-4">
+              <div class="flex items-center gap-2 mb-1">
+                <span class="font-semibold px-1.5 py-0.5 bg-slate-800 border border-slate-700 rounded text-slate-300 text-[11px]">${item.target_exam || '通用'}</span>
+                <span class="font-bold text-slate-100 text-sm">${item.title}</span>
+              </div>
+              <p class="text-slate-400">${item.content}</p>
+            </div>
+            <div class="col-span-2 flex justify-center">
+              <a href="https://calendar.google.com" target="_blank" class="px-2.5 py-1.5 bg-indigo-600/30 hover:bg-indigo-600 border border-indigo-500/50 rounded font-medium text-indigo-200 transition flex items-center gap-1">
+                <i class="fa-regular fa-calendar-check"></i> 加到日曆
+              </a>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // 從 Supabase 撈題
+    async function fetchExamQuestions() {
+      if (!currentUserProfile || currentUserProfile.role === 'pending_approval') {
+        alert('【權限受限】您的帳號處於待審核狀態，無法存取題庫。');
+        return;
+      }
+
+      const { data: questions, error } = await supabaseClient
+        .from('questions')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        alert('試題讀取失敗：' + error.message);
+        return;
+      }
+
+      const listContainer = document.getElementById('exam-questions-list');
+      if (listContainer && questions) {
+        listContainer.innerHTML = questions.map((q, idx) => `
+          <div class="p-4 rounded-lg bg-slate-900/70 border border-slate-700 space-y-3">
+            <div class="flex items-center justify-between text-xs text-indigo-400 font-bold">
+              <span>第 ${idx + 1} 題【${q.subject}】</span>
+              <span class="bg-slate-800 px-2 py-0.5 rounded text-slate-300">${q.category}</span>
+            </div>
+            <p class="text-slate-200 leading-relaxed">${q.question_text}</p>
+            ${q.options ? `
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-300 pt-2">
+                ${q.options.map(opt => `<div class="p-2 rounded bg-slate-800/60 border border-slate-700/60">${opt}</div>`).join('')}
+              </div>
+            ` : ''}
+          </div>
+        `).join('');
+      }
+
+      showExamPaper();
+    }
+
+    function showExamPaper() {
+      document.getElementById('exam-filter-view').classList.add('hidden');
+      document.getElementById('exam-paper-view').classList.remove('hidden');
+    }
+
+    function showExamFilter() {
+      document.getElementById('exam-paper-view').classList.add('hidden');
+      document.getElementById('exam-filter-view').classList.remove('hidden');
+    }
+
+    function selectMember(memberKey) {
+      const nameEl = document.getElementById('member-profile-name');
+      const listEl = document.getElementById('member-footprints');
+      if (memberKey === 'peisheng') {
+        nameEl.innerText = '陳培生 準教師 的個人學術足跡';
+        listEl.innerHTML = `<div class="p-3.5 bg-slate-900 rounded-lg border border-slate-700 text-xs text-slate-300">【已撰寫電子書】巴夫洛夫經典條件制約架構解說 (累積 AI 命題 14 題)。</div>`;
+      } else {
+        nameEl.innerText = '林特教 準教師 的個人學術足跡';
+        listEl.innerHTML = `<div class="p-3.5 bg-slate-900 rounded-lg border border-slate-700 text-xs text-slate-300">【已撰寫電子書】特殊教育個別化教育計畫 (IEP) 實戰剖析。</div>`;
+      }
+    }
+
+    // 啟動電子時鐘
+    setInterval(() => {
+      const clock = document.getElementById('live-clock');
+      if (clock) {
+        const now = new Date();
+        clock.innerText = now.toTimeString().split(' ')[0];
+      }
+    }, 1000);
+
+    // 網頁載入時啟動監聽與公告撈取
+    window.addEventListener('DOMContentLoaded', async () => {
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      renderAuthUI(session);
+
+      supabaseClient.auth.onAuthStateChange((_event, session) => {
+        renderAuthUI(session);
+      });
+
+      fetchNotices();
+    });
+  </script>
+</body>
+</html>
