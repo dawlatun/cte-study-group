@@ -97,6 +97,26 @@
   <!-- 主內容容器 -->
   <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6">
 
+  <!-- 待審核權限鎖定提示遮罩 (預設隱藏 hidden) -->
+  <div id="pending-lock-overlay" class="hidden absolute inset-0 z-40 bg-slate-950/80 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center rounded-xl border border-amber-500/30">
+    <div class="w-16 h-16 rounded-full bg-amber-500/10 border border-amber-500/40 flex items-center justify-center text-amber-400 text-2xl mb-4 shadow-lg shadow-amber-500/10 animate-pulse">
+      <i class="fa-solid fa-user-clock"></i>
+    </div>
+    <h3 class="text-xl font-bold text-slate-100 mb-2">身分資格審核中</h3>
+    <p class="text-sm text-slate-400 max-w-md leading-relaxed mb-6">
+      歡迎加入準教師戰鬥營！您目前的身分為 <span class="text-amber-400 font-semibold font-mono">待審核 (pending)</span>。<br>
+      為確保讀書會社群與命題品質，核心試題庫、電子書與互動功能需待管理團隊確認教育學程身分後開通。
+    </p>
+    <div class="flex items-center gap-3">
+      <button onclick="switchTab('tab-station')" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold border border-slate-700 transition flex items-center gap-2">
+        <i class="fa-solid fa-arrow-left"></i> 回到車站布告欄
+      </button>
+      <a href="https://line.me" target="_blank" class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow transition flex items-center gap-2">
+        <i class="fa-brands fa-line"></i> 聯繫管理員審核
+      </a>
+    </div>
+  </div>
+    
     <!-- 模組 1：布告欄（車站電子時刻表風格） -->
     <section id="tab-bulletin" class="tab-content active space-y-4">
       <!-- 標題看版與電子鐘 -->
@@ -531,6 +551,7 @@
   <!-- 互動控制 JavaScript (完整無截斷) -->
   <script>
     // 頁籤切換邏輯
+  let currentActiveTab = 'tab-station'; // 預設車站布告欄
     function switchTab(tabId) {
       // 1. 隱藏所有分頁
       document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
@@ -552,6 +573,7 @@
           }
         }
       });
+      checkPermissionOverlay();
     }
 
     // 超會考：切換篩選器與試卷
@@ -687,7 +709,7 @@
       });
     }
     
-   let currentUserProfile = null;
+let currentUserProfile = null; // 存放當前登入者資料與權限
 
 async function renderAuthUI(session) {
   const btnLogin = document.getElementById('btn-login');
@@ -704,7 +726,7 @@ async function renderAuthUI(session) {
     if (userName) userName.innerText = meta.full_name || meta.name || session.user.email.split('@')[0];
     if (userAvatar) userAvatar.src = meta.avatar_url || 'https://via.placeholder.com/32';
 
-    // 抓取 profile
+    // 從資料庫查詢真實角色
     const { data: profile } = await supabaseClient
       .from('profiles')
       .select('*')
@@ -730,6 +752,9 @@ async function renderAuthUI(session) {
     if (btnLogin) btnLogin.classList.remove('hidden');
     if (userInfo) userInfo.classList.add('hidden');
   }
+
+  // 登入狀態變更後，同步檢查當前頁面遮罩
+  checkPermissionOverlay();
 }
 
     // 動態讀取 Supabase 公告並渲染車站翻牌看板
@@ -827,6 +852,24 @@ async function renderAuthUI(session) {
       console.log('成功讀取真實試題：', questions);
       // 切換到試卷檢視畫面並顯示題目
       showExamPaper();
+    }
+
+    // 檢查目前頁面是否需要顯示權限鎖定遮罩
+    function checkPermissionOverlay() {
+      const overlay = document.getElementById('pending-lock-overlay');
+      if (!overlay) return;
+    
+      // 取得目前作用中的 Tab (例如目前是否在題庫或電子書)
+      const isProtectedTab = currentActiveTab === 'tab-exam' || currentActiveTab === 'tab-ebook';
+    
+      // 判斷是否為「未登入」或「身分處於 pending_approval」
+      const isPending = !currentUserProfile || currentUserProfile.role === 'pending_approval';
+    
+      if (isProtectedTab && isPending) {
+        overlay.classList.remove('hidden');
+      } else {
+        overlay.classList.add('hidden');
+      }
     }
     
     // 頁面載入時啟動
