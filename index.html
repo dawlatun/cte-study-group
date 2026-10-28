@@ -95,7 +95,7 @@
   </header>
 
   <!-- 主內容容器 -->
-  <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6">
+  <main class="relative min-h-[500px] flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6">
 
   <!-- 待審核權限鎖定提示遮罩 (預設隱藏 hidden) -->
   <div id="pending-lock-overlay" class="hidden absolute inset-0 z-40 bg-slate-950/80 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center rounded-xl border border-amber-500/30">
@@ -553,6 +553,7 @@
     // 頁籤切換邏輯
   let currentActiveTab = 'tab-station'; // 預設車站布告欄
     function switchTab(tabId) {
+      currentActiveTab = tabId;
       // 1. 隱藏所有分頁
       document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
       
@@ -695,7 +696,9 @@
     // 3. 登出
     async function logout() {
       await supabaseClient.auth.signOut();
-      window.location.reload();
+      currentUserProfile = null; // 清空當前資料
+      // 登出後直接跳回預設首頁（布告欄），避免停留在受保護頁面未刷新
+      window.location.href = window.location.origin;
     }
     
     // 4. 監聽登入狀態並更新畫面
@@ -722,39 +725,50 @@ async function renderAuthUI(session) {
     if (btnLogin) btnLogin.classList.add('hidden');
     if (userInfo) userInfo.classList.remove('hidden');
 
-    const meta = session.user.user_metadata;
+    const meta = session.user.user_metadata || {};
     if (userName) userName.innerText = meta.full_name || meta.name || session.user.email.split('@')[0];
     if (userAvatar) userAvatar.src = meta.avatar_url || 'https://via.placeholder.com/32';
 
-    // 從資料庫查詢真實角色
-    const { data: profile } = await supabaseClient
-      .from('profiles')
-      .select('*')
-      .eq('id', session.user.id)
-      .single();
+    try {
+      // 使用 maybeSingle() 避免查無資料時程式拋錯中斷
+      const { data: profile, error } = await supabaseClient
+        .from('profiles')
+        .select('*')
+        .eq('id', session.user.id)
+        .maybeSingle();
 
-    currentUserProfile = profile;
-
-    if (profile && userBadge) {
-      if (profile.role === 'pending_approval') {
-        userBadge.innerText = '身分審核中';
-        userBadge.className = 'text-[10px] text-amber-400 font-bold';
-      } else if (profile.role === 'admin') {
-        userBadge.innerText = '系統管理員';
-        userBadge.className = 'text-[10px] text-indigo-300 font-bold';
-      } else {
-        userBadge.innerText = '正式成員';
-        userBadge.className = 'text-[10px] text-emerald-400 font-bold';
+      if (error) {
+        console.warn('讀取個人權限失敗：', error.message);
       }
+
+      currentUserProfile = profile;
+
+      if (profile && userBadge) {
+        if (profile.role === 'pending_approval') {
+          userBadge.innerText = '身分審核中';
+          userBadge.className = 'text-[10px] text-amber-400 font-bold';
+        } else if (profile.role === 'admin') {
+          userBadge.innerText = '系統管理員';
+          userBadge.className = 'text-[10px] text-indigo-300 font-bold';
+        } else {
+          userBadge.innerText = '正式成員';
+          userBadge.className = 'text-[10px] text-emerald-400 font-bold';
+        }
+      }
+    } catch (err) {
+      console.error('查詢 profile 發生未預期錯誤：', err);
     }
   } else {
+    // 未登入時確實清空全域變數與重設按鈕狀態
     currentUserProfile = null;
     if (btnLogin) btnLogin.classList.remove('hidden');
     if (userInfo) userInfo.classList.add('hidden');
   }
 
-  // 登入狀態變更後，同步檢查當前頁面遮罩
-  checkPermissionOverlay();
+  // 確保無論登入成功、未登入或查詢失敗，都會百分之百執行遮罩檢查
+  if (typeof checkPermissionOverlay === 'function') {
+    checkPermissionOverlay();
+  }
 }
 
     // 動態讀取 Supabase 公告並渲染車站翻牌看板
@@ -854,18 +868,21 @@ async function renderAuthUI(session) {
       showExamPaper();
     }
 
+    // 確保目前選中的頁籤變數有宣告
+    let currentActiveTab = 'tab-station';
     // 檢查目前頁面是否需要顯示權限鎖定遮罩
     function checkPermissionOverlay() {
       const overlay = document.getElementById('pending-lock-overlay');
       if (!overlay) return;
     
-      // 取得目前作用中的 Tab (例如目前是否在題庫或電子書)
-      const isProtectedTab = currentActiveTab === 'tab-exam' || currentActiveTab === 'tab-ebook';
+      // 定義受保護的頁籤
+      const protectedTabs = ['tab-exam', 'tab-ebook', 'tab-community']; 
+      const isProtectedTab = protectedTabs.includes(currentActiveTab);
     
-      // 判斷是否為「未登入」或「身分處於 pending_approval」
-      const isPending = !currentUserProfile || currentUserProfile.role === 'pending_approval';
+      // 判斷未登入或待審核身分
+      const isPendingOrGuest = !currentUserProfile || currentUserProfile.role === 'pending_approval' || currentUserProfile.role === 'guest';
     
-      if (isProtectedTab && isPending) {
+      if (isProtectedTab && isPendingOrGuest) {
         overlay.classList.remove('hidden');
       } else {
         overlay.classList.add('hidden');
