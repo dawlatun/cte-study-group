@@ -687,46 +687,50 @@
       });
     }
     
-    async function renderAuthUI(session) {
-      const btnLogin = document.getElementById('btn-login');
-      const userInfo = document.getElementById('user-info');
-      const userAvatar = document.getElementById('user-avatar');
-      const userName = document.getElementById('user-name');
-      const userBadge = document.getElementById('user-badge');
-    
-      if (session && session.user) {
-        btnLogin.classList.add('hidden');
-        userInfo.classList.remove('hidden');
-    
-        // 取得 Google 回傳的基本資料
-        const meta = session.user.user_metadata;
-        userName.innerText = meta.full_name || meta.name || session.user.email.split('@')[0];
-        userAvatar.src = meta.avatar_url || 'https://via.placeholder.com/32';
-    
-        // 從資料庫 profiles 查詢真實角色審核狀態
-        const { data: profile } = await supabaseClient
-          .from('profiles')
-          .select('role, stage')
-          .eq('id', session.user.id)
-          .single();
-    
-        if (profile) {
-          if (profile.role === 'pending_approval') {
-            userBadge.innerText = '身分審核中';
-            userBadge.className = 'text-[10px] text-amber-400';
-          } else if (profile.role === 'admin') {
-            userBadge.innerText = '系統管理員';
-            userBadge.className = 'text-[10px] text-indigo-300 font-bold';
-          } else {
-            userBadge.innerText = '正式成員';
-            userBadge.className = 'text-[10px] text-emerald-400 font-bold';
-          }
-        }
+   let currentUserProfile = null;
+
+async function renderAuthUI(session) {
+  const btnLogin = document.getElementById('btn-login');
+  const userInfo = document.getElementById('user-info');
+  const userAvatar = document.getElementById('user-avatar');
+  const userName = document.getElementById('user-name');
+  const userBadge = document.getElementById('user-badge');
+
+  if (session && session.user) {
+    if (btnLogin) btnLogin.classList.add('hidden');
+    if (userInfo) userInfo.classList.remove('hidden');
+
+    const meta = session.user.user_metadata;
+    if (userName) userName.innerText = meta.full_name || meta.name || session.user.email.split('@')[0];
+    if (userAvatar) userAvatar.src = meta.avatar_url || 'https://via.placeholder.com/32';
+
+    // 抓取 profile
+    const { data: profile } = await supabaseClient
+      .from('profiles')
+      .select('*')
+      .eq('id', session.user.id)
+      .single();
+
+    currentUserProfile = profile;
+
+    if (profile && userBadge) {
+      if (profile.role === 'pending_approval') {
+        userBadge.innerText = '身分審核中';
+        userBadge.className = 'text-[10px] text-amber-400 font-bold';
+      } else if (profile.role === 'admin') {
+        userBadge.innerText = '系統管理員';
+        userBadge.className = 'text-[10px] text-indigo-300 font-bold';
       } else {
-        btnLogin.classList.remove('hidden');
-        userInfo.classList.add('hidden');
+        userBadge.innerText = '正式成員';
+        userBadge.className = 'text-[10px] text-emerald-400 font-bold';
       }
     }
+  } else {
+    currentUserProfile = null;
+    if (btnLogin) btnLogin.classList.remove('hidden');
+    if (userInfo) userInfo.classList.add('hidden');
+  }
+}
 
     // 動態讀取 Supabase 公告並渲染車站翻牌看板
     async function fetchNotices() {
@@ -801,6 +805,29 @@
       initAuthListener();
       fetchNotices(); // 讀取資料庫公告
     });
+
+    // 動態撈取題庫資料
+    async function fetchExamQuestions() {
+      // 檢查權限
+      if (!currentUserProfile || currentUserProfile.role === 'pending_approval') {
+        alert('【權限受限】您的帳號目前處於「身分審核中」，請待管理員開通為正式成員後方可使用超會考題庫。');
+        return;
+      }
+    
+      const { data: questions, error } = await supabaseClient
+        .from('questions')
+        .select('*')
+        .order('created_at', { ascending: false });
+    
+      if (error) {
+        alert('讀取題庫失敗：' + error.message);
+        return;
+      }
+    
+      console.log('成功讀取真實試題：', questions);
+      // 切換到試卷檢視畫面並顯示題目
+      showExamPaper();
+    }
     
     // 頁面載入時啟動
     window.addEventListener('DOMContentLoaded', () => {
