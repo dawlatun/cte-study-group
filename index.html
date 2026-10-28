@@ -66,7 +66,10 @@
       <div id="user-info" class="hidden flex items-center space-x-3">
         <img id="user-avatar" src="" alt="avatar" class="w-7 h-7 rounded-full border border-indigo-400">
         <div class="text-left hidden sm:block">
-          <div id="user-name" class="font-bold text-slate-200 leading-tight">--</div>
+          <div id="user-name" onclick="changeCustomName()" title="點擊自訂讀書會稱呼" class="font-bold text-slate-200 leading-tight cursor-pointer hover:text-indigo-300 transition flex items-center gap-1">
+            <span>--</span>
+            <i class="fa-solid fa-pen text-[10px] opacity-60"></i>
+          </div>
           <div id="user-badge" class="text-[10px] text-amber-400 font-bold">待審核</div>
         </div>
         <button onclick="logout()" class="px-2 py-1 rounded bg-slate-700 hover:bg-slate-600 text-slate-300 text-[11px] transition">
@@ -324,7 +327,7 @@
     // ==========================================
     const SUPABASE_URL = 'https://evykaepyjsnzjestaykc.supabase.co';
     // 務必放入您在 Supabase Project Settings ➜ API 複製的真實 anon 金鑰（單行、無換行）
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2eWthZXB5anNuemplc3RheWtjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIyOTQ4MTEsImV4cCI6MjEwNzg3MDgxMX0.GzUKmJMYR_mMexkbb5iHFddNhtSY_qiJATFC7d0PpOA';
+    const SUPABASE_ANON_KEY = '請替換為您的真實anon金鑰';
     const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     // Google OAuth 登入
@@ -345,6 +348,38 @@
       await supabaseClient.auth.signOut();
       currentUserProfile = null;
       window.location.href = window.location.origin;
+    }
+
+    // 點擊自訂讀書會稱呼（不影響 Google 帳號設定）
+    async function changeCustomName() {
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      if (!session) {
+        alert('請先登入後再修改暱稱！');
+        return;
+      }
+
+      const nameContainer = document.getElementById('user-name');
+      const currentName = nameContainer ? nameContainer.querySelector('span').innerText : '';
+      const newName = prompt('請輸入您在讀書會戰鬥營中要顯示的自訂稱呼：', currentName);
+
+      if (newName && newName.trim() !== '' && newName.trim() !== currentName) {
+        const { error } = await supabaseClient
+          .from('profiles')
+          .update({ custom_name: newName.trim() })
+          .eq('id', session.user.id);
+
+        if (error) {
+          alert('更新稱呼失敗：' + error.message);
+        } else {
+          if (nameContainer) {
+            nameContainer.querySelector('span').innerText = newName.trim();
+          }
+          if (currentUserProfile) {
+            currentUserProfile.custom_name = newName.trim();
+          }
+          alert('稱呼已成功更新！');
+        }
+      }
     }
 
     // 檢查受保護頁籤的權限遮罩
@@ -374,7 +409,7 @@
       }
     }
 
-    // 渲染右上角身分狀態與頭像
+    // 渲染右上角身分狀態、頭像與自訂稱謂
     async function renderAuthUI(session) {
       const btnLogin = document.getElementById('btn-login');
       const userInfo = document.getElementById('user-info');
@@ -386,33 +421,45 @@
         if (btnLogin) btnLogin.classList.add('hidden');
         if (userInfo) userInfo.classList.remove('hidden');
 
-        const meta = session.user.user_metadata || {};
-        if (userName) userName.innerText = meta.full_name || meta.name || session.user.email.split('@')[0];
-        if (userAvatar) userAvatar.src = meta.avatar_url || 'https://via.placeholder.com/32';
-
+        // 先從 profiles 查詢是否有自訂 custom_name 與角色
+        let profile = null;
         try {
-          const { data: profile } = await supabaseClient
+          const { data } = await supabaseClient
             .from('profiles')
             .select('*')
             .eq('id', session.user.id)
             .maybeSingle();
 
+          profile = data;
           currentUserProfile = profile;
-
-          if (profile && userBadge) {
-            if (profile.role === 'pending_approval') {
-              userBadge.innerText = '身分審核中';
-              userBadge.className = 'text-[10px] text-amber-400 font-bold';
-            } else if (profile.role === 'admin') {
-              userBadge.innerText = '系統管理員';
-              userBadge.className = 'text-[10px] text-indigo-300 font-bold';
-            } else {
-              userBadge.innerText = '正式成員';
-              userBadge.className = 'text-[10px] text-emerald-400 font-bold';
-            }
-          }
         } catch (e) {
           console.error('查詢 profile 失敗：', e);
+        }
+
+        const meta = session.user.user_metadata || {};
+        const googleName = meta.full_name || meta.name || session.user.email.split('@')[0];
+
+        // 優先顯示 profiles.custom_name，若無才 fallback 到 Google 姓名
+        if (userName) {
+          const displayName = (profile && profile.custom_name) ? profile.custom_name : googleName;
+          userName.querySelector('span').innerText = displayName;
+        }
+
+        if (userAvatar) {
+          userAvatar.src = meta.avatar_url || 'https://via.placeholder.com/32';
+        }
+
+        if (profile && userBadge) {
+          if (profile.role === 'pending_approval') {
+            userBadge.innerText = '身分審核中';
+            userBadge.className = 'text-[10px] text-amber-400 font-bold';
+          } else if (profile.role === 'admin') {
+            userBadge.innerText = '系統管理員';
+            userBadge.className = 'text-[10px] text-indigo-300 font-bold';
+          } else {
+            userBadge.innerText = '正式成員';
+            userBadge.className = 'text-[10px] text-emerald-400 font-bold';
+          }
         }
       } else {
         currentUserProfile = null;
@@ -423,7 +470,7 @@
       checkPermissionOverlay();
     }
 
-    // 動態載入車站布告欄
+    // 動態載入車站布告欄（重要公告：淺綠色燈號與字體）
     async function fetchNotices() {
       const container = document.getElementById('notice-list-container');
       if (!container) return;
@@ -451,6 +498,7 @@
             <span class="px-2 py-0.5 rounded bg-red-500/20 text-red-400 border border-red-500/40 font-bold">緊急</span>
           `;
         } else if (item.priority === 'important') {
+          // 淺綠色燈號與字體配置
           lightHtml = `
             <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-lg shadow-emerald-500/20"></span>
             <span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold">重要</span>
@@ -519,7 +567,10 @@
       btn.innerText = '發布中...';
 
       const { data: { session } } = await supabaseClient.auth.getSession();
-      const authorName = session?.user?.user_metadata?.full_name || session?.user?.email || '讀書會成員';
+      // 作者名稱優先使用自訂稱謂
+      const authorName = (currentUserProfile && currentUserProfile.custom_name) 
+        ? currentUserProfile.custom_name 
+        : (session?.user?.user_metadata?.full_name || session?.user?.email || '讀書會成員');
 
       const { error } = await supabaseClient
         .from('articles')
