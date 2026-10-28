@@ -121,8 +121,10 @@
             <div class="col-span-6 text-left">【考科／重要日程與說明】</div>
             <div class="col-span-2">【外部連動】</div>
           </div>
-          <div class="divide-y divide-slate-800/80 text-xs">
-            
+          <div id="notice-list-container" class="divide-y divide-slate-800/80 text-xs">
+          <!-- 載入中骨架屏或預設提示 -->
+          <div class="p-6 text-center text-slate-500 font-mono">載入最新公告中...</div>
+          </div>
             <!-- 列 1：緊急 (紅燈) -->
             <div class="grid grid-cols-12 px-4 py-4 items-center hover:bg-slate-900/40 transition">
               <div class="col-span-2 flex items-center justify-center gap-2">
@@ -725,6 +727,80 @@
         userInfo.classList.add('hidden');
       }
     }
+
+    // 動態讀取 Supabase 公告並渲染車站翻牌看板
+    async function fetchNotices() {
+      const container = document.getElementById('notice-list-container');
+      if (!container) return;
+    
+      const { data: notices, error } = await supabaseClient
+        .from('notices')
+        .select('*')
+        .order('created_at', { ascending: false });
+    
+      if (error) {
+        container.innerHTML = `<div class="p-4 text-center text-red-400 font-mono">公告載入失敗：${error.message}</div>`;
+        return;
+      }
+    
+      if (!notices || notices.length === 0) {
+        container.innerHTML = `<div class="p-4 text-center text-slate-500 font-mono">目前尚無公告</div>`;
+        return;
+      }
+    
+      // 渲染動態資料
+      container.innerHTML = notices.map(item => {
+        // 依據 priority 設定燈號樣式
+        let lightHtml = '';
+        if (item.priority === 'urgent') {
+          lightHtml = `
+            <span class="w-2.5 h-2.5 rounded-full bg-red-500 shadow-lg animate-ping"></span>
+            <span class="px-2 py-0.5 rounded bg-red-500/20 text-red-400 border border-red-500/40 font-bold">緊急</span>
+          `;
+        } else if (item.priority === 'important') {
+          lightHtml = `
+            <span class="w-2.5 h-2.5 rounded-full bg-sky-400 shadow-lg"></span>
+            <span class="px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-500/40 font-bold">重要</span>
+          `;
+        } else {
+          lightHtml = `
+            <span class="w-2.5 h-2.5 rounded-full bg-slate-200 shadow"></span>
+            <span class="px-2 py-0.5 rounded bg-slate-700/60 text-slate-300 border border-slate-600 font-bold">一般</span>
+          `;
+        }
+    
+        return `
+          <div class="grid grid-cols-12 px-4 py-4 items-center hover:bg-slate-900/40 transition">
+            <div class="col-span-2 flex items-center justify-center gap-2">
+              ${lightHtml}
+            </div>
+            <div class="col-span-2 flex justify-center">
+              <div class="bg-amber-400/10 border border-amber-400/30 text-amber-300 font-mono text-lg font-black px-3 py-1 rounded shadow tracking-widest">
+                ${item.days_label || 'D-Day'}
+              </div>
+            </div>
+            <div class="col-span-6 pr-4">
+              <div class="flex items-center gap-2 mb-1">
+                <span class="font-semibold px-1.5 py-0.5 bg-slate-800 border border-slate-700 rounded text-slate-300 text-[11px]">${item.target_exam || '通用'}</span>
+                <span class="font-bold text-slate-100 text-sm">${item.title}</span>
+              </div>
+              <p class="text-slate-400">${item.content}</p>
+            </div>
+            <div class="col-span-2 flex justify-center">
+              <a href="https://calendar.google.com" target="_blank" class="px-2.5 py-1.5 bg-indigo-600/30 hover:bg-indigo-600 border border-indigo-500/50 rounded font-medium text-indigo-200 transition flex items-center gap-1">
+                <i class="fa-regular fa-calendar-check"></i> 加到日曆
+              </a>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+    
+    // 在網頁載入時一併執行公告讀取
+    window.addEventListener('DOMContentLoaded', () => {
+      initAuthListener();
+      fetchNotices(); // 讀取資料庫公告
+    });
     
     // 頁面載入時啟動
     window.addEventListener('DOMContentLoaded', () => {
